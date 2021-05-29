@@ -1,7 +1,9 @@
 import asyncio
+from math import floor
 from bleak import BleakClient
 from enum import Enum
-import mouse
+import pyautogui
+from pytweening import easeInBack
 
 address = "2C:BA:BA:2F:E1:DC"
 MODEL_UUID = "00002a00-0000-1000-8000-00805f9b34fb"
@@ -12,17 +14,19 @@ class Modes(Enum):
     Normal_Comm = 0x0100
     VR_Comm = 0x0800
 
+pyautogui.FAILSAFE = False
 async def notification_handler(sender, data):
             """Simple notification handler which prints the data received."""
             print("{0}:".format(data))
 
-async def cantusenotify(client, seconds, INFO_UUID):
+async def cantusenotify(client, INFO_UUID):
             while True:
                 data = await client.read_gatt_char(INFO_UUID)
-                print("Last Reading: {0}".format(data.hex()))
-                axisX = (((data[54] & 0xF) << 6) +((data[55] & 0xFC) >> 2)) & 0x3FF;
-                axisY = (((data[55] & 0x3) << 8) +((data[56] & 0xFF) >> 0)) & 0x3FF;
-                mouse.move(axisX, axisY, absolute=True, duration= 0.03)
+                print("Last Reading: {0} {1} {2}".format(data[54], data[55] ,data[56]))
+                axisX = (((data[54] & 0xF) << 6) +((data[55] & 0xFC) >> 2))
+                axisY = (((data[55] & 0x3) << 8) +((data[56] & 0xFF) >> 0))
+                print(axisX, axisY)
+                pyautogui.moveTo(floor(axisX*6.095),floor(axisY*3.428), duration= 0.1, tween=easeInBack)
 
 
 async def run(address):
@@ -38,7 +42,7 @@ async def run(address):
         #print("Last Reading: {0}".format(data.hex()))
 
 
-        await cantusenotify(client, 60, INFO_UUID)
+        await cantusenotify(client, INFO_UUID)
 
         #await client.start_notify(INFO_UUID, notification_handler)
         await asyncio.sleep(60)
