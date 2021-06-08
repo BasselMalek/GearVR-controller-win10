@@ -3,6 +3,7 @@
 //Standard C/C++ headers.
 #include <stdlib.h>
 #include <iostream>
+#include <fstream>
 #include <algorithm>
 #include <vector>
 
