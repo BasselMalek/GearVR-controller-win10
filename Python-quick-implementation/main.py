@@ -22,11 +22,12 @@ async def notification_handler(sender, data):
 async def cantusenotify(client, INFO_UUID):
             while True:
                 data = await client.read_gatt_char(INFO_UUID)
+                print(data)
                 print("Last Reading: {0} {1} {2}".format(data[54], data[55] ,data[56]))
                 axisX = (((data[54] & 0xF) << 6) +((data[55] & 0xFC) >> 2))
                 axisY = (((data[55] & 0x3) << 8) +((data[56] & 0xFF) >> 0))
                 print(axisX, axisY)
-                pyautogui.moveTo(floor(axisX*6.095),floor(axisY*3.428), duration= 0.1, tween=easeInBack)
+                #pyautogui.moveTo(floor(axisX*6.095),floor(axisY*3.428), duration= 0.1, tween=easeInBack)
 
 
 async def run(address):
