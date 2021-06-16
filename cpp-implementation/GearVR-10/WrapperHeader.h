@@ -7,8 +7,11 @@
 #include <algorithm>
 #include <vector>
 
-//C++/Winrt headers.
+//Windows headers.
 #include <windows.h>
+#include "wtypes.h"
+
+//C++/Winrt headers.
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Devices.Bluetooth.h>

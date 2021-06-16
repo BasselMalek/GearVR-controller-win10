@@ -28,7 +28,8 @@ async def cantusenotify(client, INFO_UUID):
                 axisY = (((data[55] & 0x3) << 8) +((data[56] & 0xFF) >> 0))
                 print(axisX, axisY)
                 #pyautogui.moveTo(floor(axisX*6.095),floor(axisY*3.428), duration= 0.1, tween=easeInBack)
-
+str = "8ced240c740374078c05e100f3fcb6f51a00250c8a03360767058001b2fb91f7a812250ca80303073e05010306f9cefc0000000000002000001c4055"
+print(str[16 * 0 + 4: 16 * 0 + 4 + 2])
 
 async def run(address):
     async with BleakClient(address) as client:
