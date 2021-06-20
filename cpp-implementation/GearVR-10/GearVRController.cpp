@@ -101,8 +101,8 @@ AxisData ControllerData::returnScaledTouchpadOutput()
 	ControllerData::fullRefresh();
 	CurrentResolution RES1366;
 	AxisData current_touch;
-	int tempx = (((buffer_vector[54] & 0xF) << 6) + ((buffer_vector[55] & 0xFC) >> 2)) & 0x3FF;
-	int tempy = (((buffer_vector[55] & 0x3) << 8) + ((buffer_vector[56] & 0xFF) >> 0)) & 0x3FF;
+	int tempx = (((buffer_vector[54] & 0xF) << 6) + ((buffer_vector[55] & 0xFC) >> 2));
+	int tempy = (((buffer_vector[55] & 0x3) << 8) + ((buffer_vector[56] & 0xFF) >> 0));
 	current_touch.axis_x = ((RES1366.width / 315) * tempx);
 	current_touch.axis_y = ((RES1366.height / 315) * tempy);
 	return current_touch;
