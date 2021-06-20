@@ -6,6 +6,7 @@
 #include <fstream>
 #include <algorithm>
 #include <vector>
+#include <bitset>
 
 //Windows headers.
 #include <windows.h>
