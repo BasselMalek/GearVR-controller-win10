@@ -1,13 +1,13 @@
 # GearVR-controller-win10
-A project to utilize the GearVR contoller as an input device for win10, the current implementation is a very jank implementation based on the Bleak Python library.  
-TO-DO:
-- [ ] Improve current implementation
-- [X] Write a more efficent implementation (C++)
-- [ ] ~Write a low level implementation to improve to further improve performance and compatibility (C)~
-  
-  
-  
-  
-  
-  
-*It goes without saying that without the work of @jsyang and the extensive documentaion on his reverse enginnering process none of this would be possible.*
+My personal take on interfacing with the Samsung GearVR Contoller on PC.
+## Why this exits?
+Being my first experience with C++ outside of competitive programming, I wanted to learn new concepts and make use of the GearVR headset that I barely use. 
+The main three concepts I learned here were: C++/WinRT, BluetoothLE Stack, and working in Visual Studio (which I dreaded the most).
+## TO-DO:
+- [X] Write a more efficient implementation (C++)
+- [ ] Implement Accelerometer, Gyroscope, and Magnetometer data parsing
+- [ ] Implement an IMU algorithm
+- [ ] Switch to an asynchronous workflow
+
+## Credits
+It goes without saying that without the work of @jsyang and the extensive documentation on his reverse engineering process none of this would be possible.
