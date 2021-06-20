@@ -142,6 +142,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="GearVRController.cpp" />
+    <ClCompile Include="demo_driver.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

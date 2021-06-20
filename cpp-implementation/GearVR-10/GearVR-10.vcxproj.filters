@@ -18,6 +18,9 @@
     <ClCompile Include="GearVRController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="demo_driver.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
