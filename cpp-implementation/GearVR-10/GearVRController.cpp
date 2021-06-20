@@ -8,9 +8,7 @@ GearVRController::GearVRController(uint64_t address)
 	charac_list(charac_res_obj.Characteristics()), INFO_CHAR(charac_list.GetAt(0)), COMMAND_CHAR(charac_list.GetAt(1))
 	
 {
-	////Initializing address and device.
 	GearVRController::MAC_address = address;
-	//Initializing the controller's main service and its main chars (not async).
 }
 
 GearVRController::~GearVRController()
@@ -19,21 +17,23 @@ GearVRController::~GearVRController()
 
 std::vector<int> GearVRController::returnReadingVector()
 {
-	//Creating buffer and sending command.
+	// Read operation through a windows ibuffer
 	winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattReadResult read_result = INFO_CHAR.ReadValueAsync(winrt::Windows::Devices::Bluetooth::BluetoothCacheMode::Uncached).get();
 	winrt::Windows::Storage::Streams::IBuffer read = read_result.Value();
 	winrt::hstring result = winrt::Windows::Security::Cryptography::CryptographicBuffer::EncodeToHexString(read);
 	std::string raw_readable_result = winrt::to_string(result);
+
+	// Decoding to from the hex string to a vector
 	std::vector<int> result_vec;
 	for (int i = 0; i < 120; i += 2)
 	{
-		std::string tempstr;
-		tempstr.append(1, raw_readable_result[i]);
-		tempstr.append(1, raw_readable_result[i + 1]);
-		std::stringstream ss;
-		ss << std::hex << tempstr;
+		std::string temp_str;
+		temp_str.append(1, raw_readable_result[i]);
+		temp_str.append(1, raw_readable_result[i + 1]);
+		std::stringstream temp_str_stream;
+		temp_str_stream << std::hex << temp_str;
 		unsigned int x;
-		ss >> x;
+		temp_str_stream >> x;
 		result_vec.push_back(x);
 	}
 	return result_vec;
@@ -54,6 +54,7 @@ void GearVRController::writeCommand()
 	COMMAND_CHAR.WriteValueAsync(send_packet);
 }
 
+// Return current screen resolution
 CurrentResolution::CurrentResolution()
 {
 	RECT desktop;
