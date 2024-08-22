@@ -1,5 +1,5 @@
-/.vscode
-/cpp-implementation/GearVR-10/packages
-/cpp-implementation/GearVR-10/debug
-/cpp-implementation/GearVR-10/.vs
+/packages
+/debug
+/x64
+/.vs
 /misc

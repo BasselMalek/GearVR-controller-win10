@@ -39,6 +39,23 @@ std::vector<int> GearVRController::returnReadingVector()
 	return result_vec;
 }
 
+void GearVRController::startListener()
+{
+	auto notifyStatus = this->INFO_CHAR.WriteClientCharacteristicConfigurationDescriptorAsync(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattClientCharacteristicConfigurationDescriptorValue::Notify).get();
+	if (notifyStatus == winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus::Success)
+	{
+		std::cout << "Successfully subscribed to characteristic notifications.";
+	}
+	else {
+		std::cout << "Notification subscription unsuccessful.";
+
+	}
+	auto activeListener = this->INFO_CHAR.ValueChanged([this](winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic const& sender, winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattValueChangedEventArgs const& args) {
+		//auto hexString = winrt::Windows::Security::Cryptography::CryptographicBuffer::EncodeToHexString(args.CharacteristicValue());
+		auto rawBuffer = args.CharacteristicValue().data();
+		});
+}
+
 std::string GearVRController::returnRawReading()
 {
 	auto read_result = INFO_CHAR.ReadValueAsync(winrt::Windows::Devices::Bluetooth::BluetoothCacheMode::Uncached).get();
@@ -53,6 +70,7 @@ void GearVRController::writeCommand()
 	winrt::Windows::Storage::Streams::IBuffer send_packet = winrt::Windows::Security::Cryptography::CryptographicBuffer::DecodeFromHexString(L"0100");
 	COMMAND_CHAR.WriteValueAsync(send_packet);
 }
+
 
 // Return current screen resolution
 CurrentResolution::CurrentResolution()

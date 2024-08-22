@@ -2,6 +2,7 @@
 
 //Standard C/C++ headers.
 #include <stdlib.h>
+#include <sstream>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -10,6 +11,7 @@
 
 //Windows headers.
 #include <windows.h>
+#include <WinUser.h>
 #include "wtypes.h"
 
 //C++/Winrt headers.

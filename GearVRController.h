@@ -33,11 +33,12 @@ public:
 
 public:
 	std::vector<int> returnReadingVector();
+	void startListener();
 	std::string returnRawReading();
 	void writeCommand();
 
+
 private:
-	
 	uint64_t MAC_address;
 	//BluetoothLE GATT variables
 	winrt::Windows::Devices::Bluetooth::BluetoothLEDevice device;
