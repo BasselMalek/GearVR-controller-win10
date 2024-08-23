@@ -109,16 +109,18 @@ void GearVRController::touchHandler(int xAxis, int yAxis) {
   input.type = INPUT_MOUSE;
   input.mi.dx = (xAxis - xPrev);
   input.mi.dy = (yAxis - yPrev);
-  if ((-xAxis != (157 * SCALING_FACTOR) && -yAxis != (157 * SCALING_FACTOR) &&
-       xPrev && yPrev)) {
+  if ((xAxis != (157 * SCALING_FACTOR * -1) &&
+       yAxis != (157 * SCALING_FACTOR * -1) && xPrev && yPrev)) {
     input.mi.dwFlags = MOUSEEVENTF_MOVE;
     SendInput(1, &input, sizeof(INPUT));
   } else {
     input.mi.dwFlags = 0;
   }
-  xPrev = (-xAxis == 315 * SCALING_FACTOR) ? 0 : xAxis;
-  yPrev = (-yAxis == 315 * SCALING_FACTOR) ? 0 : yAxis;
+  xPrev = (xAxis == (157 * SCALING_FACTOR * -1)) ? 0 : xAxis;
+  yPrev = (yAxis == (157 * SCALING_FACTOR * -1)) ? 0 : yAxis;
 }
+
+void GearVRController::fusionHandler() {}
 
 Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus
 GearVRController::writeCommand(GearVRController::DEVICE_MODES writeCommand) {

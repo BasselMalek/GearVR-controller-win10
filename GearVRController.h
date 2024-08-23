@@ -63,18 +63,3 @@ private:
   void touchHandler(int xAxis, int yAxis);
   void fusionHandler();
 };
-
-//// Data processing class
-// class ControllerData {
-// public:
-//   ControllerData(GearVRController &con_obj);
-//   ~ControllerData();
-//   AxisData returnScaledTouchpadOutput();
-//   MiscExtraData returnMiscExtra();
-//   std::bitset<6> returnButtons();
-//   void fullRefresh(int xAxis, int yAxis);
-//
-// private:
-//   GearVRController *current_controller;
-//   std::vector<int> buffer_vector;
-// };
