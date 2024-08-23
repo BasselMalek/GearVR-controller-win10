@@ -1,5 +1,6 @@
 #include "GearVRController.h"
 #include "WrapperHeader.h"
+#define SCALING_FACTOR 7
 
 using namespace winrt::Windows;
 
@@ -70,6 +71,13 @@ void GearVRController::mainEventHandler(
        (bool)(rawBuffer[58] & (1 << 2)), (bool)(rawBuffer[58] & (1 << 3)),
        (bool)(rawBuffer[58] & (1 << 4)), (bool)(rawBuffer[58] & (1 << 5))});
   GearVRController::keyHandler(states);
+  GearVRController::touchHandler(
+      ((((rawBuffer[54] & 0xF) << 6) + ((rawBuffer[55] & 0xFC) >> 2)) & 0x3FF) *
+              SCALING_FACTOR -
+          157 * SCALING_FACTOR,
+      ((((rawBuffer[55] & 0x3) << 8) + ((rawBuffer[56] & 0xFF) >> 0)) & 0x3FF) *
+              SCALING_FACTOR -
+          157 * SCALING_FACTOR);
 }
 
 //(bool)(rawBuffer[58] & (1 << 0)); // 0 -> trigger button
@@ -93,6 +101,23 @@ void GearVRController::keyHandler(std::vector<bool> &keyStates) {
     }
   }
   prev = keyStates;
+}
+
+void GearVRController::touchHandler(int xAxis, int yAxis) {
+  static int xPrev = 0, yPrev = 0;
+  static INPUT input = {};
+  input.type = INPUT_MOUSE;
+  input.mi.dx = (xAxis - xPrev);
+  input.mi.dy = (yAxis - yPrev);
+  if ((-xAxis != (157 * SCALING_FACTOR) && -yAxis != (157 * SCALING_FACTOR) &&
+       xPrev && yPrev)) {
+    input.mi.dwFlags = MOUSEEVENTF_MOVE;
+    SendInput(1, &input, sizeof(INPUT));
+  } else {
+    input.mi.dwFlags = 0;
+  }
+  xPrev = (-xAxis == 315 * SCALING_FACTOR) ? 0 : xAxis;
+  yPrev = (-yAxis == 315 * SCALING_FACTOR) ? 0 : yAxis;
 }
 
 Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus
