@@ -118,10 +118,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionPath)\Packages\Fusion;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -141,6 +143,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Fusion\FusionAhrs.c" />
+    <ClCompile Include="Fusion\FusionCompass.c" />
+    <ClCompile Include="Fusion\FusionOffset.c" />
     <ClCompile Include="GearVRController.cpp" />
     <ClCompile Include="demo_driver.cpp" />
   </ItemGroup>
@@ -148,6 +153,14 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Fusion\Fusion.h" />
+    <ClInclude Include="Fusion\FusionAhrs.h" />
+    <ClInclude Include="Fusion\FusionAxes.h" />
+    <ClInclude Include="Fusion\FusionCalibration.h" />
+    <ClInclude Include="Fusion\FusionCompass.h" />
+    <ClInclude Include="Fusion\FusionConvention.h" />
+    <ClInclude Include="Fusion\FusionMath.h" />
+    <ClInclude Include="Fusion\FusionOffset.h" />
     <ClInclude Include="GearVRController.h" />
     <ClInclude Include="WrapperHeader.h" />
   </ItemGroup>

@@ -4,24 +4,6 @@
 
 using namespace winrt::Windows;
 
-struct AxisData {
-  int axis_x;
-  int axis_y;
-};
-
-class CurrentResolution {
-public:
-  int width;
-  int height;
-  CurrentResolution();
-  ~CurrentResolution();
-};
-
-struct MiscExtraData {
-  float timestamp;
-  int temperature;
-};
-
 struct KeyMappings {
   static INPUT inputs[6];
   static void initMappings(uint8_t scanKeys[6]);
@@ -45,6 +27,10 @@ public:
 private:
   uint64_t MAC_address;
   DEVICE_MODES currentMode;
+  FusionAhrs fusionEngine;
+  FusionOffset fusionOffsetParams;
+
+  std::chrono::steady_clock::time_point lastStamp;
   // BluetoothLE GATT variables
   Devices::Bluetooth::BluetoothLEDevice deviceObject;
   Foundation::Collections::IVectorView<
@@ -61,5 +47,5 @@ private:
           GattValueChangedEventArgs const &args);
   void keyHandler(std::vector<bool> &keyStates);
   void touchHandler(int xAxis, int yAxis);
-  void fusionHandler();
+  void fusionHandler(uint8_t rawBytes[18]);
 };

@@ -12,10 +12,6 @@ int main() {
   uint64_t address = 0x2CBABA2FE1DC;
   GearVRController Controller(address);
   auto vrStatus = Controller.writeCommand(GearVRController::VR);
-  std::cout << (vrStatus == Devices::Bluetooth::GenericAttributeProfile::
-                                GattCommunicationStatus::Success)
-      ? 1
-      : 0;
   auto status = Controller.writeCommand(GearVRController::SENSORS);
   Controller.startListener();
   std::cin.get();

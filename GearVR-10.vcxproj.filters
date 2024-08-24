@@ -21,6 +21,15 @@
     <ClCompile Include="demo_driver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Fusion\FusionAhrs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Fusion\FusionCompass.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Fusion\FusionOffset.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -30,6 +39,30 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GearVRController.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Fusion\Fusion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Fusion\FusionAhrs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Fusion\FusionAxes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Fusion\FusionCalibration.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Fusion\FusionCompass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Fusion\FusionConvention.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Fusion\FusionMath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Fusion\FusionOffset.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
