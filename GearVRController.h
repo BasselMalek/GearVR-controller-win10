@@ -22,7 +22,10 @@ public:
   writeCommand(GearVRController::DEVICE_MODES witeCommand);
 
   void startListener();
+  void manualRead();
   void revokeListener();
+  void rawDataOutput(uint8_t *buffer);
+  void prints();
 
 private:
   uint64_t MAC_address;
@@ -37,8 +40,10 @@ private:
       Devices::Bluetooth::GenericAttributeProfile::GattDeviceService>
       deviceServices;
   Devices::Bluetooth::GenericAttributeProfile::GattDeviceService commsService;
+  Devices::Bluetooth::GenericAttributeProfile::GattDeviceService calibService;
   Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic DATA_TX;
   Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic COMMAND_RX;
+  Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic calibCharac;
 
   void mainEventHandler(
       Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic const

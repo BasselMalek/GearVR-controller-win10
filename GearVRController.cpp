@@ -21,6 +21,10 @@ GearVRController::GearVRController(uint64_t address)
               .get()),
       deviceServices(deviceObject.GetGattServicesAsync().get().Services()),
       commsService(deviceServices.GetAt(5)),
+      calibService(deviceServices.GetAt(4)),
+      calibCharac(
+          calibService.GetCharacteristicsAsync().get().Characteristics().GetAt(
+              1)),
       DATA_TX(
           commsService.GetCharacteristicsAsync().get().Characteristics().GetAt(
               0)),
@@ -30,26 +34,16 @@ GearVRController::GearVRController(uint64_t address)
       currentMode(DEVICE_MODES::OFF),
       lastStamp(std::chrono::steady_clock::now()) {
   GearVRController::MAC_address = address;
-  const FusionMatrix gyroscopeMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-                                              0.0f, 0.0f, 0.0f, 1.0f};
-  const FusionVector gyroscopeSensitivity = {1.0f, 1.0f, 1.0f};
-  const FusionVector gyroscopeOffset = {0.0f, 0.0f, 0.0f};
-  const FusionMatrix accelerometerMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-                                                  0.0f, 0.0f, 0.0f, 1.0f};
-  const FusionVector accelerometerSensitivity = {1.0f, 1.0f, 1.0f};
-  const FusionVector accelerometerOffset = {0.0f, 0.0f, 0.0f};
-  const FusionMatrix softIronMatrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-                                       0.0f, 0.0f, 0.0f, 1.0f};
-  const FusionVector hardIronOffset = {0.0f, 0.0f, 0.0f};
-  FusionOffsetInitialise(&this->fusionOffsetParams, 68.84681583453657);
+  FusionOffsetInitialise(&this->fusionOffsetParams, 69);
   FusionAhrsInitialise(&this->fusionEngine);
   const FusionAhrsSettings settings = {
       .convention = FusionConventionNwu,
-      .gain = 0.5f,
+      .gain = 0.2f,
+      .gyroscopeRange = 4000.0f,
       .accelerationRejection = 10.0f,
       .magneticRejection = 10.0f,
       .recoveryTriggerPeriod =
-          static_cast<unsigned int>(5 * 68.84681583453657), /* 5 seconds */
+          static_cast<unsigned int>(5 * 69), /* 5 seconds */
   };
   FusionAhrsSetSettings(&this->fusionEngine, &settings);
 }
@@ -109,24 +103,50 @@ void GearVRController::startListener() {
       this->DATA_TX.ValueChanged({this, &GearVRController::mainEventHandler});
 }
 
+void GearVRController::manualRead() {
+  GearVRController::rawDataOutput(
+      this->calibCharac.ReadValueAsync().get().Value().data());
+}
+
+void GearVRController::rawDataOutput(uint8_t *buffer) {
+  std::ostringstream convert;
+  for (int a = 0; a < 59; a++) {
+    convert << std::hex << (int)buffer[a];
+  }
+  std::string key_string = convert.str();
+  std::cout << key_string << std::endl;
+}
+
+void GearVRController::prints() {
+  for (auto ser :
+       this->calibService.GetCharacteristicsAsync().get().Characteristics()) {
+    wchar_t struuid[39];
+    auto result = StringFromGUID2(ser.Uuid(), struuid, 39);
+    std::wcout << struuid << std::endl;
+  }
+}
+
 void GearVRController::mainEventHandler(
     Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic const
         &sender,
     Devices::Bluetooth::GenericAttributeProfile::GattValueChangedEventArgs const
         &args) {
   auto rawBuffer = args.CharacteristicValue().data();
-  std::vector states = {
-      (bool)(rawBuffer[58] & (1 << 0)), (bool)(rawBuffer[58] & (1 << 1)),
-      (bool)(rawBuffer[58] & (1 << 2)), (bool)(rawBuffer[58] & (1 << 3)),
-      (bool)(rawBuffer[58] & (1 << 4)), (bool)(rawBuffer[58] & (1 << 5))};
-  GearVRController::keyHandler(states);
-  GearVRController::touchHandler(
-      ((((rawBuffer[54] & 0xF) << 6) + ((rawBuffer[55] & 0xFC) >> 2)) & 0x3FF) *
-              SCALING_FACTOR -
-          157 * SCALING_FACTOR,
-      ((((rawBuffer[55] & 0x3) << 8) + ((rawBuffer[56] & 0xFF) >> 0)) & 0x3FF) *
-              SCALING_FACTOR -
-          157 * SCALING_FACTOR);
+  // GearVRController::rawDataOutput(rawBuffer);
+  //  std::vector states = {
+  //      (bool)(rawBuffer[58] & (1 << 0)), (bool)(rawBuffer[58] & (1 << 1)),
+  //      (bool)(rawBuffer[58] & (1 << 2)), (bool)(rawBuffer[58] & (1 << 3)),
+  //      (bool)(rawBuffer[58] & (1 << 4)), (bool)(rawBuffer[58] & (1 << 5))};
+  //  GearVRController::keyHandler(states);
+  //  GearVRController::touchHandler(
+  //      ((((rawBuffer[54] & 0xF) << 6) + ((rawBuffer[55] & 0xFC) >> 2)) &
+  //      0x3FF) *
+  //              SCALING_FACTOR -
+  //          157 * SCALING_FACTOR,
+  //      ((((rawBuffer[55] & 0x3) << 8) + ((rawBuffer[56] & 0xFF) >> 0)) &
+  //      0x3FF) *
+  //              SCALING_FACTOR -
+  //          157 * SCALING_FACTOR);
   uint8_t accelBytes[18] = {
       rawBuffer[4],  rawBuffer[5],  rawBuffer[6],  rawBuffer[7],  rawBuffer[8],
       rawBuffer[9],  rawBuffer[10], rawBuffer[11], rawBuffer[12], rawBuffer[13],
@@ -175,31 +195,53 @@ void GearVRController::fusionHandler(uint8_t rawBytes[18]) {
       0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
   };
   for (int i = 0; i < 9; i++) {
-    int16_t combinedFromBuffer = ((rawBytes[2 * i + 1] << 8) | rawBytes[2 * i]);
+    short int combinedFromBuffer =
+        ((rawBytes[2 * i + 1] << 8) | rawBytes[2 * i]);
     if (i < 3) {
-      scaledValues[i] = static_cast<float>(
-          (combinedFromBuffer * 10000.0f * 9.80665f) / 2048.0f);
+      scaledValues[i] = static_cast<float>(combinedFromBuffer * 10000.0f *
+                                           9.80665f / 2048.0f);
       scaledValues[i] *= 0.00001f;
     } else if (i < 6) {
-      scaledValues[i] = static_cast<float>(
-          (combinedFromBuffer * 10000.0f * 0.017453292f) / 14.285f);
+      scaledValues[i] = static_cast<float>(combinedFromBuffer * 10000.0f *
+                                           0.017453292f / 14.285f);
       scaledValues[i] *= 0.0001f;
+      scaledValues[i] *= 57.295779513082f;
+
     } else {
-      scaledValues[i] = static_cast<float>((combinedFromBuffer)*0.06F);
+      scaledValues[i] = static_cast<float>(combinedFromBuffer * 0.06F);
     }
   }
-  float timeDelta = (clock - this->lastStamp).count() / 1000.0F;
+  static const FusionMatrix gyroscopeMisalignment = {
+      1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+  static const FusionVector gyroscopeSensitivity = {0.85f, 0.85f, 0.85f};
+  static const FusionVector gyroscopeOffset = {2.0f, 2.0f, 2.0f};
+  static const FusionMatrix accelerometerMisalignment = {
+      1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+  static const FusionVector accelerometerSensitivity = {1.0f, 1.0f, 1.0f};
+  static const FusionVector accelerometerOffset = {0.0f, 0.0f, 0.0f};
+  static const FusionMatrix softIronMatrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+                                              0.0f, 0.0f, 0.0f, 1.0f};
+  static const FusionVector hardIronOffset = {0.0f, 0.0f, 0.0f};
+
+  float timeDelta = (float)(clock - this->lastStamp).count() / 1000000000.0F;
   FusionVector accelerometer = {scaledValues[0], scaledValues[1],
                                 scaledValues[2]};
   FusionVector gyroscope = {scaledValues[3], scaledValues[4], scaledValues[5]};
   FusionVector mag = {scaledValues[6], scaledValues[7], scaledValues[8]};
+  gyroscope = FusionCalibrationInertial(gyroscope, gyroscopeMisalignment,
+                                        gyroscopeSensitivity, gyroscopeOffset);
+  accelerometer =
+      FusionCalibrationInertial(accelerometer, accelerometerMisalignment,
+                                accelerometerSensitivity, accelerometerOffset);
+  mag = FusionCalibrationMagnetic(mag, softIronMatrix, hardIronOffset);
   gyroscope = FusionOffsetUpdate(&this->fusionOffsetParams, gyroscope);
   FusionAhrsUpdate(&this->fusionEngine, gyroscope, accelerometer, mag,
                    timeDelta);
   FusionEuler anglesEuler =
       FusionQuaternionToEuler(FusionAhrsGetQuaternion(&this->fusionEngine));
-  printf("%0.1f,%0.1f,%0.1f, %0.1f\n", anglesEuler.angle.roll,
-         anglesEuler.angle.pitch, anglesEuler.angle.yaw, timeDelta);
+  printf("Roll: %0.1f, Pitch: %0.1f, Yaw: %0.1f, %0.1f\n",
+         anglesEuler.angle.pitch, anglesEuler.angle.roll, anglesEuler.angle.yaw,
+         timeDelta);
   this->lastStamp = clock;
 }
 
