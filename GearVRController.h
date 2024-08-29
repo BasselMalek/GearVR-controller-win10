@@ -24,8 +24,6 @@ public:
   void startListener();
   void manualRead();
   void revokeListener();
-  void rawDataOutput(uint8_t *buffer);
-  void prints();
 
 private:
   uint64_t MAC_address;
@@ -51,6 +49,9 @@ private:
       Devices::Bluetooth::GenericAttributeProfile::
           GattValueChangedEventArgs const &args);
   void keyHandler(std::vector<bool> &keyStates);
-  void touchHandler(int xAxis, int yAxis);
-  void fusionHandler(uint8_t rawBytes[18]);
+  void touchHandler(int xAxis, int yAxis, int scaleFactor);
+  FusionEuler fusionHandler(uint8_t rawBytes[18]);
+  void fusionCursor(FusionEuler angles, bool refResetOne, bool refResetTwo);
+  void DEBUG_PRINT_HEXDATAEVENT(uint8_t *buffer);
+  void DEBUG_PRINT_UUID();
 };

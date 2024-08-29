@@ -104,11 +104,11 @@ void GearVRController::startListener() {
 }
 
 void GearVRController::manualRead() {
-  GearVRController::rawDataOutput(
+  GearVRController::DEBUG_PRINT_HEXDATAEVENT(
       this->calibCharac.ReadValueAsync().get().Value().data());
 }
 
-void GearVRController::rawDataOutput(uint8_t *buffer) {
+void GearVRController::DEBUG_PRINT_HEXDATAEVENT(uint8_t *buffer) {
   std::ostringstream convert;
   for (int a = 0; a < 59; a++) {
     convert << std::hex << (int)buffer[a];
@@ -117,7 +117,7 @@ void GearVRController::rawDataOutput(uint8_t *buffer) {
   std::cout << key_string << std::endl;
 }
 
-void GearVRController::prints() {
+void GearVRController::DEBUG_PRINT_UUID() {
   for (auto ser :
        this->calibService.GetCharacteristicsAsync().get().Characteristics()) {
     wchar_t struuid[39];
@@ -132,39 +132,32 @@ void GearVRController::mainEventHandler(
     Devices::Bluetooth::GenericAttributeProfile::GattValueChangedEventArgs const
         &args) {
   auto rawBuffer = args.CharacteristicValue().data();
-  // GearVRController::rawDataOutput(rawBuffer);
-  //  std::vector states = {
-  //      (bool)(rawBuffer[58] & (1 << 0)), (bool)(rawBuffer[58] & (1 << 1)),
-  //      (bool)(rawBuffer[58] & (1 << 2)), (bool)(rawBuffer[58] & (1 << 3)),
-  //      (bool)(rawBuffer[58] & (1 << 4)), (bool)(rawBuffer[58] & (1 << 5))};
-  //  GearVRController::keyHandler(states);
-  //  GearVRController::touchHandler(
-  //      ((((rawBuffer[54] & 0xF) << 6) + ((rawBuffer[55] & 0xFC) >> 2)) &
-  //      0x3FF) *
-  //              SCALING_FACTOR -
-  //          157 * SCALING_FACTOR,
-  //      ((((rawBuffer[55] & 0x3) << 8) + ((rawBuffer[56] & 0xFF) >> 0)) &
-  //      0x3FF) *
-  //              SCALING_FACTOR -
-  //          157 * SCALING_FACTOR);
+  std::vector states = {
+      (bool)(rawBuffer[58] & (1 << 0)), (bool)(rawBuffer[58] & (1 << 1)),
+      (bool)(rawBuffer[58] & (1 << 2)), (bool)(rawBuffer[58] & (1 << 3)),
+      (bool)(rawBuffer[58] & (1 << 4)), (bool)(rawBuffer[58] & (1 << 5))};
+  // GearVRController::keyHandler(states);
+  // GearVRController::touchHandler(
+  //    ((((rawBuffer[54] & 0xF) << 6) + ((rawBuffer[55] & 0xFC) >> 2)) &
+  //    0x3FF),
+  //    ((((rawBuffer[55] & 0x3) << 8) + ((rawBuffer[56] & 0xFF) >> 0)) &
+  //    0x3FF), SCALING_FACTOR);
   uint8_t accelBytes[18] = {
       rawBuffer[4],  rawBuffer[5],  rawBuffer[6],  rawBuffer[7],  rawBuffer[8],
       rawBuffer[9],  rawBuffer[10], rawBuffer[11], rawBuffer[12], rawBuffer[13],
       rawBuffer[14], rawBuffer[15], rawBuffer[32], rawBuffer[33], rawBuffer[34],
       rawBuffer[35], rawBuffer[36], rawBuffer[37]};
-  GearVRController::fusionHandler(accelBytes);
+  auto fusionResult = GearVRController::fusionHandler(accelBytes);
+  GearVRController::fusionCursor(fusionResult, states[0], states[3]);
 }
 
 void GearVRController::keyHandler(std::vector<bool> &keyStates) {
   static std::vector<bool> prev(6, 0);
   for (int i = 0; i < 6; i++) {
     if (keyStates[i] && !prev[i]) {
-      // KeyMappings::inputs[i].ki.dwFlags = KEYEVENTF_SCANCODE;
       KeyMappings::inputs[i].ki.dwFlags = 0;
       SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
     } else if (!keyStates[i] && prev[i]) {
-      // KeyMappings::inputs[i].ki.dwFlags = KEYEVENTF_SCANCODE |
-      // KEYEVENTF_KEYUP;
       KeyMappings::inputs[i].ki.dwFlags = KEYEVENTF_KEYUP;
       SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
     }
@@ -172,24 +165,26 @@ void GearVRController::keyHandler(std::vector<bool> &keyStates) {
   prev = keyStates;
 }
 
-void GearVRController::touchHandler(int xAxis, int yAxis) {
+void GearVRController::touchHandler(int xAxis, int yAxis, int scaleFactor) {
   static int xPrev = 0, yPrev = 0;
-  static INPUT input = {};
-  input.type = INPUT_MOUSE;
-  input.mi.dx = (xAxis - xPrev);
-  input.mi.dy = (yAxis - yPrev);
-  if ((xAxis != (157 * SCALING_FACTOR * -1) &&
-       yAxis != (157 * SCALING_FACTOR * -1) && xPrev && yPrev)) {
-    input.mi.dwFlags = MOUSEEVENTF_MOVE;
-    SendInput(1, &input, sizeof(INPUT));
+  xAxis = (xAxis * scaleFactor) - (157 * scaleFactor);
+  yAxis = (yAxis * scaleFactor) - (157 * scaleFactor);
+  static INPUT mouseInput = {};
+  mouseInput.type = INPUT_MOUSE;
+  mouseInput.mi.dx = (xAxis - xPrev);
+  mouseInput.mi.dy = (yAxis - yPrev);
+  if ((xAxis != (157 * -scaleFactor) && yAxis != (157 * -scaleFactor) &&
+       xPrev && yPrev)) {
+    mouseInput.mi.dwFlags = MOUSEEVENTF_MOVE;
+    SendInput(1, &mouseInput, sizeof(INPUT));
   } else {
-    input.mi.dwFlags = 0;
+    mouseInput.mi.dwFlags = 0;
   }
-  xPrev = (xAxis == (157 * SCALING_FACTOR * -1)) ? 0 : xAxis;
-  yPrev = (yAxis == (157 * SCALING_FACTOR * -1)) ? 0 : yAxis;
+  xPrev = (xAxis == (157 * -scaleFactor)) ? 0 : xAxis;
+  yPrev = (yAxis == (157 * -scaleFactor)) ? 0 : yAxis;
 }
 
-void GearVRController::fusionHandler(uint8_t rawBytes[18]) {
+FusionEuler GearVRController::fusionHandler(uint8_t rawBytes[18]) {
   auto clock = std::chrono::steady_clock::now();
   static float scaledValues[9] = {
       0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
@@ -237,12 +232,61 @@ void GearVRController::fusionHandler(uint8_t rawBytes[18]) {
   gyroscope = FusionOffsetUpdate(&this->fusionOffsetParams, gyroscope);
   FusionAhrsUpdate(&this->fusionEngine, gyroscope, accelerometer, mag,
                    timeDelta);
-  FusionEuler anglesEuler =
-      FusionQuaternionToEuler(FusionAhrsGetQuaternion(&this->fusionEngine));
-  printf("Roll: %0.1f, Pitch: %0.1f, Yaw: %0.1f, %0.1f\n",
-         anglesEuler.angle.pitch, anglesEuler.angle.roll, anglesEuler.angle.yaw,
-         timeDelta);
   this->lastStamp = clock;
+  auto result =
+      FusionQuaternionToEuler(FusionAhrsGetQuaternion(&this->fusionEngine));
+  return result;
+}
+
+void GearVRController::fusionCursor(FusionEuler angles, bool refResetOne,
+                                    bool refResetTwo) {
+  static int initLaunch = 1;
+  static int pitchOffset = 0, yawOffset = 0;
+  static int prevPitch = 0, prevYaw = 0;
+  static INPUT fusionInput = {};
+  static INPUT clickInput = {0};
+  fusionInput.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  static int xAxis = 32767, yAxis = 32767;
+  if (refResetOne && !refResetTwo) {
+    clickInput.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+    SendInput(1, &clickInput, sizeof(INPUT));
+  } else {
+    clickInput.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+    SendInput(1, &clickInput, sizeof(INPUT));
+  }
+  if ((refResetOne && refResetTwo) || initLaunch) {
+    pitchOffset = angles.angle.roll;
+    yawOffset = angles.angle.yaw;
+    fusionInput.mi.dx = xAxis;
+    fusionInput.mi.dy = yAxis;
+    SendInput(1, &fusionInput, sizeof(INPUT));
+    initLaunch = 0;
+  } else {
+    if ((angles.angle.roll - pitchOffset) < -60) {
+      yAxis = 0;
+    } else if ((angles.angle.roll - pitchOffset) > 60) {
+      yAxis = 32767;
+    } else {
+      yAxis = (angles.angle.roll - prevPitch < 1)
+                  ? prevPitch
+                  : -(angles.angle.roll - pitchOffset) * 1092;
+    }
+    if ((angles.angle.yaw - yawOffset) < -80) {
+      xAxis = 0;
+    } else if ((angles.angle.yaw - yawOffset) > 80) {
+      xAxis = 32767;
+    } else {
+      xAxis = (abs(angles.angle.yaw - prevYaw) < 3)
+                  ? prevYaw
+                  : -(angles.angle.yaw - yawOffset) * 728;
+      ;
+    }
+    fusionInput.mi.dx = xAxis + 32767;
+    fusionInput.mi.dy = yAxis + 32767;
+    prevPitch = angles.angle.roll - pitchOffset;
+    prevYaw = angles.angle.yaw - yawOffset;
+    SendInput(1, &fusionInput, sizeof(INPUT));
+  }
 }
 
 // MiscExtraData ControllerData::returnMiscExtra() {
