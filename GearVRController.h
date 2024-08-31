@@ -25,6 +25,8 @@ public:
   void manualRead();
   void revokeListener();
 
+  std::bitset<4> opFlags;
+
 private:
   uint64_t MAC_address;
   DEVICE_MODES currentMode;

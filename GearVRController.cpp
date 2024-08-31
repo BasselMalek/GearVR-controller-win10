@@ -38,7 +38,7 @@ GearVRController::GearVRController(uint64_t address)
           commsService.GetCharacteristicsAsync().get().Characteristics().GetAt(
               1)),
       currentMode(DEVICE_MODES::OFF),
-      lastStamp(std::chrono::steady_clock::now()) {
+      lastStamp(std::chrono::steady_clock::now()), opFlags(std::bitset<4>(0)) {
   GearVRController::MAC_address = address;
   FusionOffsetInitialise(&this->fusionOffsetParams, 69);
   FusionAhrsInitialise(&this->fusionEngine);
@@ -112,8 +112,10 @@ void GearVRController::startListener() {
       this->DATA_TX.ValueChanged({this, &GearVRController::mainEventHandler});
 }
 void GearVRController::revokeListener() {
-  this->DATA_TX.ValueChanged(this->listenerToken);
-  this->listenerToken.value = 0;
+  if (this->listenerToken) {
+    this->DATA_TX.ValueChanged(this->listenerToken);
+    this->listenerToken.value = 0;
+  }
 }
 
 void GearVRController::manualRead() {
@@ -149,20 +151,25 @@ void GearVRController::mainEventHandler(
       (bool)(rawBuffer[58] & (1 << 0)), (bool)(rawBuffer[58] & (1 << 1)),
       (bool)(rawBuffer[58] & (1 << 2)), (bool)(rawBuffer[58] & (1 << 3)),
       (bool)(rawBuffer[58] & (1 << 4)), (bool)(rawBuffer[58] & (1 << 5))};
-  // GearVRController::keyHandler(states);
-  // GearVRController::touchHandler(
-  //    ((((rawBuffer[54] & 0xF) << 6) + ((rawBuffer[55] & 0xFC) >> 2)) &
-  //    0x3FF),
-  //    ((((rawBuffer[55] & 0x3) << 8) + ((rawBuffer[56] & 0xFF) >> 0)) &
-  //    0x3FF), SCALING_FACTOR);
   uint8_t accelBytes[18] = {
       rawBuffer[4],  rawBuffer[5],  rawBuffer[6],  rawBuffer[7],  rawBuffer[8],
       rawBuffer[9],  rawBuffer[10], rawBuffer[11], rawBuffer[12], rawBuffer[13],
       rawBuffer[14], rawBuffer[15], rawBuffer[32], rawBuffer[33], rawBuffer[34],
       rawBuffer[35], rawBuffer[36], rawBuffer[37]};
   auto fusionResult = GearVRController::fusionHandler(accelBytes);
-  // GearVRController::fusionCursor(fusionResult, states[0], states[3]);
-  GearVRController::keyHandler(states);
+  int touchXAxis =
+      ((((rawBuffer[54] & 0xF) << 6) + ((rawBuffer[55] & 0xFC) >> 2)) & 0x3FF);
+  int touchYAxis =
+      ((((rawBuffer[55] & 0x3) << 8) + ((rawBuffer[56] & 0xFF) >> 0)) & 0x3FF);
+  if (GearVRController::opFlags[0]) {
+    GearVRController::fusionCursor(fusionResult, states[0], states[3]);
+  }
+  if (GearVRController::opFlags[1]) {
+    GearVRController::touchHandler(touchXAxis, touchYAxis, SCALING_FACTOR);
+  }
+  if (GearVRController::opFlags[2]) {
+    GearVRController::keyHandler(states);
+  }
 }
 
 void GearVRController::keyHandler(std::vector<bool> &keyStates) {
