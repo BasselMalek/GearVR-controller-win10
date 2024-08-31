@@ -74,9 +74,13 @@ int main() {
       keys.push_back(strtouhex(configIni["buttons"][keyValue.first]));
     }
     KeyMappings::initMappings(keys);
+    ControllerObject.writeCommand(GearVRController::VR);
+    ControllerObject.writeCommand(GearVRController::SENSORS);
     while (true) {
       int choice;
       ControllerObject.revokeListener();
+      std::cout << "-----------------------------------------------------------"
+                   "------------\n";
       std::cout << "1. Toggle Fusion.\t Status:" << ControllerObject.opFlags[0]
                 << std::endl;
       std::cout << "2. Toggle Touchpad.\t Status:"
@@ -86,6 +90,8 @@ int main() {
       std::cout << "4. Toggle D-pad Mode.\t Status:"
                 << ControllerObject.opFlags[3] << std::endl;
       std::cout << "5. Start controller." << std::endl;
+      std::cout << "-----------------------------------------------------------"
+                   "------------\n";
       std::cin >> choice;
       switch (choice) {
       case 1:
@@ -101,8 +107,6 @@ int main() {
         ControllerObject.opFlags.flip(3);
         break;
       case 5:
-        ControllerObject.writeCommand(GearVRController::VR);
-        ControllerObject.writeCommand(GearVRController::SENSORS);
         ControllerObject.startListener();
         system("pause");
         break;

@@ -44,7 +44,7 @@ GearVRController::GearVRController(uint64_t address)
   FusionAhrsInitialise(&this->fusionEngine);
   const FusionAhrsSettings settings = {
       .convention = FusionConventionNwu,
-      .gain = 0.7f,
+      .gain = 0.2f,
       .gyroscopeRange = 4000.0f,
       .accelerationRejection = 10.0f,
       .magneticRejection = 10.0f,
@@ -96,6 +96,7 @@ GearVRController::writeCommand(GearVRController::DEVICE_MODES writeCommand) {
   return COMMAND_RX.WriteValueAsync(send_packet).get();
 }
 void GearVRController::startListener() {
+
   auto notifyStatus =
       this->DATA_TX
           .WriteClientCharacteristicConfigurationDescriptorAsync(
@@ -104,9 +105,9 @@ void GearVRController::startListener() {
           .get();
   if (notifyStatus == Devices::Bluetooth::GenericAttributeProfile::
                           GattCommunicationStatus::Success) {
-    std::cout << "Successfully subscribed to characteristic notifications.";
+    std::cout << "Successfully subscribed to characteristic notifications.\n";
   } else {
-    std::cout << "Notification subscription unsuccessful.";
+    std::cout << "Notification subscription unsuccessful.\n";
   }
   this->listenerToken =
       this->DATA_TX.ValueChanged({this, &GearVRController::mainEventHandler});
@@ -243,7 +244,7 @@ FusionEuler GearVRController::fusionHandler(uint8_t rawBytes[18]) {
   }
   static const FusionMatrix gyroscopeMisalignment = {
       1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-  static const FusionVector gyroscopeSensitivity = {0.85f, 0.85f, 0.85f};
+  static const FusionVector gyroscopeSensitivity = {0.75f, 0.75f, 0.75f};
   static const FusionVector gyroscopeOffset = {2.0f, 2.0f, 2.0f};
   static const FusionMatrix accelerometerMisalignment = {
       1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
@@ -306,7 +307,6 @@ void GearVRController::fusionCursor(FusionEuler angles, bool refResetOne,
       xAxis = (abs(angles.angle.yaw - prevYaw) < 10)
                   ? prevYaw
                   : -(angles.angle.yaw - yawOffset) * 728;
-      ;
     }
     fusionInput.mi.dx = xAxis + 32767;
     fusionInput.mi.dy = yAxis + 32767;
