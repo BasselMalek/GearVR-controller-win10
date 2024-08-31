@@ -119,6 +119,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>F:\Programming\GearVR-controller-win10\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -134,6 +135,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>F:\Programming\GearVR-controller-win10\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -143,26 +146,45 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Fusion\FusionAhrs.c" />
-    <ClCompile Include="Fusion\FusionCompass.c" />
-    <ClCompile Include="Fusion\FusionOffset.c" />
     <ClCompile Include="GearVRController.cpp" />
-    <ClCompile Include="demo_driver.cpp" />
+    <ClCompile Include="include\Fusion\FusionAhrs.c" />
+    <ClCompile Include="include\Fusion\FusionCompass.c" />
+    <ClCompile Include="include\Fusion\FusionOffset.c" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Fusion\Fusion.h" />
-    <ClInclude Include="Fusion\FusionAhrs.h" />
-    <ClInclude Include="Fusion\FusionAxes.h" />
-    <ClInclude Include="Fusion\FusionCalibration.h" />
-    <ClInclude Include="Fusion\FusionCompass.h" />
-    <ClInclude Include="Fusion\FusionConvention.h" />
-    <ClInclude Include="Fusion\FusionMath.h" />
-    <ClInclude Include="Fusion\FusionOffset.h" />
     <ClInclude Include="GearVRController.h" />
+    <ClInclude Include="include\cli\boostasiocliasyncsession.h" />
+    <ClInclude Include="include\cli\boostasioremotecli.h" />
+    <ClInclude Include="include\cli\boostasioscheduler.h" />
+    <ClInclude Include="include\cli\cli.h" />
+    <ClInclude Include="include\cli\clifilesession.h" />
+    <ClInclude Include="include\cli\clilocalsession.h" />
+    <ClInclude Include="include\cli\colorprofile.h" />
+    <ClInclude Include="include\cli\filehistorystorage.h" />
+    <ClInclude Include="include\cli\historystorage.h" />
+    <ClInclude Include="include\cli\loopscheduler.h" />
+    <ClInclude Include="include\cli\scheduler.h" />
+    <ClInclude Include="include\cli\standaloneasiocliasyncsession.h" />
+    <ClInclude Include="include\cli\standaloneasioremotecli.h" />
+    <ClInclude Include="include\cli\standaloneasioscheduler.h" />
+    <ClInclude Include="include\cli\volatilehistorystorage.h" />
+    <ClInclude Include="include\Fusion\Fusion.h" />
+    <ClInclude Include="include\Fusion\FusionAhrs.h" />
+    <ClInclude Include="include\Fusion\FusionAxes.h" />
+    <ClInclude Include="include\Fusion\FusionCalibration.h" />
+    <ClInclude Include="include\Fusion\FusionCompass.h" />
+    <ClInclude Include="include\Fusion\FusionConvention.h" />
+    <ClInclude Include="include\Fusion\FusionMath.h" />
+    <ClInclude Include="include\Fusion\FusionOffset.h" />
+    <ClInclude Include="ini.h" />
     <ClInclude Include="WrapperHeader.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="include\Fusion\CMakeLists.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

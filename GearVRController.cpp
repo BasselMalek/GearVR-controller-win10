@@ -6,10 +6,16 @@ using namespace winrt::Windows;
 
 INPUT KeyMappings::inputs[6] = {};
 
-void KeyMappings::initMappings(uint8_t scanKeys[6]) {
+void KeyMappings::initMappings(std::vector<uint8_t> scanKeys) {
 
   for (int i = 0; i < 6; i++) {
-    KeyMappings::inputs[i].type = INPUT_KEYBOARD;
+    if (scanKeys[i] == 0x01 || scanKeys[i] == 0x02) {
+      KeyMappings::inputs[i].type = INPUT_MOUSE;
+      KeyMappings::inputs[i].mi.dwFlags =
+          scanKeys[i] == 0x01 ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_RIGHTDOWN;
+    } else {
+      KeyMappings::inputs[i].type = INPUT_KEYBOARD;
+    }
     KeyMappings::inputs[i].ki.wVk = scanKeys[i];
   }
 }
@@ -38,7 +44,7 @@ GearVRController::GearVRController(uint64_t address)
   FusionAhrsInitialise(&this->fusionEngine);
   const FusionAhrsSettings settings = {
       .convention = FusionConventionNwu,
-      .gain = 0.2f,
+      .gain = 0.7f,
       .gyroscopeRange = 4000.0f,
       .accelerationRejection = 10.0f,
       .magneticRejection = 10.0f,
@@ -155,18 +161,33 @@ void GearVRController::mainEventHandler(
       rawBuffer[14], rawBuffer[15], rawBuffer[32], rawBuffer[33], rawBuffer[34],
       rawBuffer[35], rawBuffer[36], rawBuffer[37]};
   auto fusionResult = GearVRController::fusionHandler(accelBytes);
-  GearVRController::fusionCursor(fusionResult, states[0], states[3]);
+  // GearVRController::fusionCursor(fusionResult, states[0], states[3]);
+  GearVRController::keyHandler(states);
 }
 
 void GearVRController::keyHandler(std::vector<bool> &keyStates) {
   static std::vector<bool> prev(6, 0);
   for (int i = 0; i < 6; i++) {
     if (keyStates[i] && !prev[i]) {
-      KeyMappings::inputs[i].ki.dwFlags = 0;
-      SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
+      if (KeyMappings::inputs[i].type == INPUT_MOUSE) {
+        SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
+      } else {
+        KeyMappings::inputs[i].ki.dwFlags = 0;
+        SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
+      }
     } else if (!keyStates[i] && prev[i]) {
-      KeyMappings::inputs[i].ki.dwFlags = KEYEVENTF_KEYUP;
-      SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
+      if (KeyMappings::inputs[i].type == INPUT_MOUSE) {
+        KeyMappings::inputs[i].mi.dwFlags =
+            KeyMappings::inputs[i].ki.wVk == 0x01 ? MOUSEEVENTF_LEFTUP
+                                                  : MOUSEEVENTF_RIGHTUP;
+        SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
+        KeyMappings::inputs[i].mi.dwFlags =
+            KeyMappings::inputs[i].ki.wVk == 0x01 ? MOUSEEVENTF_LEFTDOWN
+                                                  : MOUSEEVENTF_RIGHTDOWN;
+      } else {
+        KeyMappings::inputs[i].ki.dwFlags = KEYEVENTF_KEYUP;
+        SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
+      }
     }
   }
   prev = keyStates;
@@ -251,16 +272,8 @@ void GearVRController::fusionCursor(FusionEuler angles, bool refResetOne,
   static int pitchOffset = 0, yawOffset = 0;
   static int prevPitch = 0, prevYaw = 0;
   static INPUT fusionInput = {};
-  static INPUT clickInput = {0};
   fusionInput.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
   static int xAxis = 32767, yAxis = 32767;
-  if (refResetOne && !refResetTwo) {
-    clickInput.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-    SendInput(1, &clickInput, sizeof(INPUT));
-  } else {
-    clickInput.mi.dwFlags = MOUSEEVENTF_LEFTUP;
-    SendInput(1, &clickInput, sizeof(INPUT));
-  }
   if ((refResetOne && refResetTwo) || initLaunch) {
     pitchOffset = angles.angle.roll;
     yawOffset = angles.angle.yaw;
@@ -283,7 +296,7 @@ void GearVRController::fusionCursor(FusionEuler angles, bool refResetOne,
     } else if ((angles.angle.yaw - yawOffset) > 80) {
       xAxis = 32767;
     } else {
-      xAxis = (abs(angles.angle.yaw - prevYaw) < 3)
+      xAxis = (abs(angles.angle.yaw - prevYaw) < 10)
                   ? prevYaw
                   : -(angles.angle.yaw - yawOffset) * 728;
       ;

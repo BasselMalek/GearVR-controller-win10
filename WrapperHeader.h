@@ -25,5 +25,7 @@
 #include <winrt/Windows.Storage.Streams.h>
 #include <winrt/Windows.Storage.h>
 
-// IMU Fusion courtesy of xioTechnologies
-#include "./Fusion/Fusion.h"
+// 3rd party packages
+#include "Fusion/Fusion.h"
+// #include "cli/cli.h"
+#include "ini/ini.h"

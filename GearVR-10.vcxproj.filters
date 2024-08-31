@@ -18,17 +18,17 @@
     <ClCompile Include="GearVRController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="demo_driver.cpp">
+    <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Fusion\FusionAhrs.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="include\Fusion\FusionAhrs.c">
+      <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="Fusion\FusionCompass.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="include\Fusion\FusionCompass.c">
+      <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="Fusion\FusionOffset.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="include\Fusion\FusionOffset.c">
+      <Filter>Header Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -41,29 +41,82 @@
     <ClInclude Include="GearVRController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Fusion\Fusion.h">
+    <ClInclude Include="ini.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Fusion\FusionAhrs.h">
+    <ClInclude Include="include\Fusion\Fusion.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Fusion\FusionAxes.h">
+    <ClInclude Include="include\Fusion\FusionAhrs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Fusion\FusionCalibration.h">
+    <ClInclude Include="include\Fusion\FusionAxes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Fusion\FusionCompass.h">
+    <ClInclude Include="include\Fusion\FusionCalibration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Fusion\FusionConvention.h">
+    <ClInclude Include="include\Fusion\FusionCompass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Fusion\FusionMath.h">
+    <ClInclude Include="include\Fusion\FusionConvention.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Fusion\FusionOffset.h">
+    <ClInclude Include="include\Fusion\FusionMath.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\Fusion\FusionOffset.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\boostasiocliasyncsession.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\boostasioremotecli.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\boostasioscheduler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\cli.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\clifilesession.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\clilocalsession.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\colorprofile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\filehistorystorage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\historystorage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\loopscheduler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\scheduler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\standaloneasiocliasyncsession.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\standaloneasioremotecli.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\standaloneasioscheduler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cli\volatilehistorystorage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="include\Fusion\CMakeLists.txt">
+      <Filter>Header Files</Filter>
+    </Text>
   </ItemGroup>
 </Project>

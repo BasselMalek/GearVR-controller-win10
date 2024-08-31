@@ -6,7 +6,7 @@ using namespace winrt::Windows;
 
 struct KeyMappings {
   static INPUT inputs[6];
-  static void initMappings(uint8_t scanKeys[6]);
+  static void initMappings(std::vector<uint8_t> scanKeys);
 };
 
 // Main class for read/write and I/O
