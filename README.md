@@ -1,13 +1,13 @@
 # GearVR-controller-win10
 My personal take on interfacing with the Samsung GearVR Contoller on PC.
-## Why this exits?
-Being my first experience with C++ outside of competitive programming, I wanted to learn new concepts and make use of the GearVR headset that I barely use. 
-The main three concepts I learned here were: C++/WinRT, BluetoothLE Stack, and working in Visual Studio (which I dreaded the most).
-## TO-DO:
-- [X] Write a more efficient implementation (C++)
-- [ ] Implement Accelerometer, Gyroscope, and Magnetometer data parsing
-- [ ] Implement an IMU algorithm
-- [ ] Switch to an asynchronous workflow
+##Features
+- [x] CLI interface.    
+- [x] Remappable buttons.
+- [x] Touchpad tracking.
+- [ ] Touchpad D-pad.
+- [x] 3d cursor (experimental, needs further calibration to fix drift/jitter).
 
 ## Credits
-It goes without saying that without the work of @jsyang and the extensive documentation on his reverse engineering process none of this would be possible.
+- @jsyang for their extensive documentation on their reverse engineering process.
+- @xioTechnologies for their implementation of the Magdwick fusion algorithm.
+- @metayeti for their handy .ini library.
