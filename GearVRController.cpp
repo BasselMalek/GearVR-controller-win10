@@ -48,7 +48,11 @@ GearVRController::GearVRController(uint64_t address)
   FusionAhrsSetSettings(&this->fusionEngine, &settings);
 }
 
-GearVRController::~GearVRController() {}
+GearVRController::~GearVRController() {
+  if (this->listenerToken) {
+    this->revokeListener();
+  }
+}
 
 Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus
 GearVRController::writeCommand(GearVRController::DEVICE_MODES writeCommand) {
@@ -85,7 +89,6 @@ GearVRController::writeCommand(GearVRController::DEVICE_MODES writeCommand) {
   currentMode = writeCommand;
   return COMMAND_RX.WriteValueAsync(send_packet).get();
 }
-
 void GearVRController::startListener() {
   auto notifyStatus =
       this->DATA_TX
@@ -99,8 +102,12 @@ void GearVRController::startListener() {
   } else {
     std::cout << "Notification subscription unsuccessful.";
   }
-  auto activeListener =
+  this->listenerToken =
       this->DATA_TX.ValueChanged({this, &GearVRController::mainEventHandler});
+}
+void GearVRController::revokeListener() {
+  this->DATA_TX.ValueChanged(this->listenerToken);
+  this->listenerToken.value = 0;
 }
 
 void GearVRController::manualRead() {

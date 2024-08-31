@@ -28,6 +28,7 @@ public:
 private:
   uint64_t MAC_address;
   DEVICE_MODES currentMode;
+  winrt::event_token listenerToken;
   FusionAhrs fusionEngine;
   FusionOffset fusionOffsetParams;
 
