@@ -4,11 +4,10 @@
 
 using namespace winrt::Windows;
 
-INPUT KeyMappings::inputs[6] = {};
+INPUT KeyMappings::inputs[11] = {};
 
 void KeyMappings::initMappings(std::vector<uint8_t> scanKeys) {
-
-  for (int i = 0; i < 6; i++) {
+  for (int i = 0; i < 11; i++) {
     if (scanKeys[i] == 0x01 || scanKeys[i] == 0x02) {
       KeyMappings::inputs[i].type = INPUT_MOUSE;
       KeyMappings::inputs[i].mi.dwFlags =
@@ -148,20 +147,33 @@ void GearVRController::mainEventHandler(
     Devices::Bluetooth::GenericAttributeProfile::GattValueChangedEventArgs const
         &args) {
   auto rawBuffer = args.CharacteristicValue().data();
+  int touchXAxis =
+      ((((rawBuffer[54] & 0xF) << 6) + ((rawBuffer[55] & 0xFC) >> 2)) & 0x3FF);
+  int touchYAxis =
+      ((((rawBuffer[55] & 0x3) << 8) + ((rawBuffer[56] & 0xFF) >> 0)) & 0x3FF);
   std::vector states = {
-      (bool)(rawBuffer[58] & (1 << 0)), (bool)(rawBuffer[58] & (1 << 1)),
-      (bool)(rawBuffer[58] & (1 << 2)), (bool)(rawBuffer[58] & (1 << 3)),
-      (bool)(rawBuffer[58] & (1 << 4)), (bool)(rawBuffer[58] & (1 << 5))};
+      (bool)(rawBuffer[58] & (1 << 0)),
+      (bool)(rawBuffer[58] & (1 << 1)),
+      (bool)(rawBuffer[58] & (1 << 2)),
+      (bool)(rawBuffer[58] & (1 << 3)),
+      (bool)(rawBuffer[58] & (1 << 4)),
+      (bool)(rawBuffer[58] & (1 << 5)),
+      ((bool)(rawBuffer[58] & (1 << 3)) &&
+       GearVRController::dpadState(touchXAxis, touchYAxis, 'C')),
+      ((bool)(rawBuffer[58] & (1 << 3)) &&
+       GearVRController::dpadState(touchXAxis, touchYAxis, 'U')),
+      ((bool)(rawBuffer[58] & (1 << 3)) &&
+       GearVRController::dpadState(touchXAxis, touchYAxis, 'D')),
+      ((bool)(rawBuffer[58] & (1 << 3)) &&
+       GearVRController::dpadState(touchXAxis, touchYAxis, 'R')),
+      ((bool)(rawBuffer[58] & (1 << 3)) &&
+       GearVRController::dpadState(touchXAxis, touchYAxis, 'L'))};
   uint8_t accelBytes[18] = {
       rawBuffer[4],  rawBuffer[5],  rawBuffer[6],  rawBuffer[7],  rawBuffer[8],
       rawBuffer[9],  rawBuffer[10], rawBuffer[11], rawBuffer[12], rawBuffer[13],
       rawBuffer[14], rawBuffer[15], rawBuffer[32], rawBuffer[33], rawBuffer[34],
       rawBuffer[35], rawBuffer[36], rawBuffer[37]};
   auto fusionResult = GearVRController::fusionHandler(accelBytes);
-  int touchXAxis =
-      ((((rawBuffer[54] & 0xF) << 6) + ((rawBuffer[55] & 0xFC) >> 2)) & 0x3FF);
-  int touchYAxis =
-      ((((rawBuffer[55] & 0x3) << 8) + ((rawBuffer[56] & 0xFF) >> 0)) & 0x3FF);
   if (GearVRController::opFlags[0]) {
     GearVRController::fusionCursor(fusionResult, states[0], states[3]);
   }
@@ -169,13 +181,23 @@ void GearVRController::mainEventHandler(
     GearVRController::touchHandler(touchXAxis, touchYAxis, SCALING_FACTOR);
   }
   if (GearVRController::opFlags[2]) {
-    GearVRController::keyHandler(states);
+    // Prevent fusion cursor re-center combination from executing presses.
+    states[0] = states[0] && !states[3];
+    states[3] = states[3] && !states[0];
+    states[6] = states[6] && !states[0];
+    GearVRController::keyHandler(states, this->opFlags[3]);
   }
 }
 
-void GearVRController::keyHandler(std::vector<bool> &keyStates) {
-  static std::vector<bool> prev(6, 0);
-  for (int i = 0; i < 6; i++) {
+void GearVRController::keyHandler(std::vector<bool> &keyStates,
+                                  bool DPAD_MODE) {
+  static std::vector<bool> prev(11, 0);
+  int it = DPAD_MODE ? 11 : 6;
+  for (int i = 0; i < it; i++) {
+    if (DPAD_MODE && i == 3) {
+      // skip touchpad action when in d-pad  mode.
+      continue;
+    }
     if (keyStates[i] && !prev[i]) {
       if (KeyMappings::inputs[i].type == INPUT_MOUSE) {
         SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
@@ -185,6 +207,8 @@ void GearVRController::keyHandler(std::vector<bool> &keyStates) {
       }
     } else if (!keyStates[i] && prev[i]) {
       if (KeyMappings::inputs[i].type == INPUT_MOUSE) {
+        // This is a very lazy implementation that prevents further mouse
+        // mappings, should be changed later.
         KeyMappings::inputs[i].mi.dwFlags =
             KeyMappings::inputs[i].ki.wVk == 0x01 ? MOUSEEVENTF_LEFTUP
                                                   : MOUSEEVENTF_RIGHTUP;
@@ -199,6 +223,43 @@ void GearVRController::keyHandler(std::vector<bool> &keyStates) {
     }
   }
   prev = keyStates;
+}
+
+bool GearVRController::dpadState(int xAxis, int yAxis, char direction) {
+  xAxis = (xAxis - 157 == -157) ? 0 : xAxis - 157;
+  yAxis = (-(yAxis - 157) == 157) ? 0 : -(yAxis - 157);
+  int xRotated = (xAxis * cos(45) + yAxis * cos(45));
+  int yRotated = (yAxis * cos(45) - xAxis * sin(45));
+  switch (direction) {
+  case 'C':
+     //Adding a check to make sure it's not 0 introduces a dead zone at 0,0 but prevents center action from activating if the touchpad is touched on the rim.
+    return (xAxis > -52 && xAxis < 52 && xAxis) &&
+           (yAxis > -52 && yAxis < 52 && yAxis);
+    break;
+  case 'U':
+    return (xRotated > 0 && yRotated > 0) &&
+           !((xAxis > -52 && xAxis < 52 && xAxis) &&
+             (yAxis > -52 && yAxis < 52 && yAxis));
+    break;
+  case 'R':
+    return (xRotated > 0 && yRotated < 0) &&
+           !((xAxis > -52 && xAxis < 52 && xAxis) &&
+             (yAxis > -52 && yAxis < 52 && yAxis));
+    break;
+  case 'L':
+    return (xRotated < 0 && yRotated > 0) &&
+           !((xAxis > -52 && xAxis < 52 && xAxis) &&
+             (yAxis > -52 && yAxis < 52 && yAxis));
+    break;
+  case 'D':
+    return (xRotated < 0 && yRotated < 0) &&
+           !((xAxis > -52 && xAxis < 52 && xAxis) &&
+             (yAxis > -52 && yAxis < 52 && yAxis));
+    break;
+  default:
+    return false;
+    break;
+  }
 }
 
 void GearVRController::touchHandler(int xAxis, int yAxis, int scaleFactor) {

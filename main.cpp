@@ -61,8 +61,8 @@ int main() {
     if (generateCleanIni(&configIniFile, strtouhex(adrstr))) {
       std::cout << "config.ini successfully created!\nYou can modify the "
                    "keybindings there according to "
-                   "https://learn.microsoft.com/en-us/windows/win32/inputdev/"
-                   "virtual-key-codes. Restart the app to use the controller.";
+                   "https://learn.microsoft.com/en-us/windows/win32/virtual-key-codes." 
+                   "Restart the app to use the controller.";
     } else {
       std::cout << "ini file creation failed. Try again.";
     }
@@ -76,11 +76,13 @@ int main() {
     KeyMappings::initMappings(keys);
     ControllerObject.writeCommand(GearVRController::VR);
     ControllerObject.writeCommand(GearVRController::SENSORS);
+    std::cout << "Note: Fusion and touchpad cannot be turned on at the same "
+                 "time.\n";
     while (true) {
       int choice;
       ControllerObject.revokeListener();
       std::cout << "-----------------------------------------------------------"
-                   "------------\n";
+                   "------\n";
       std::cout << "1. Toggle Fusion.\t Status:" << ControllerObject.opFlags[0]
                 << std::endl;
       std::cout << "2. Toggle Touchpad.\t Status:"
@@ -91,14 +93,16 @@ int main() {
                 << ControllerObject.opFlags[3] << std::endl;
       std::cout << "5. Start controller." << std::endl;
       std::cout << "-----------------------------------------------------------"
-                   "------------\n";
+                   "------\n";
       std::cin >> choice;
       switch (choice) {
       case 1:
         ControllerObject.opFlags.flip(0);
+        ControllerObject.opFlags.set(1, 0);
         break;
       case 2:
         ControllerObject.opFlags.flip(1);
+        ControllerObject.opFlags.set(0, 0);
         break;
       case 3:
         ControllerObject.opFlags.flip(2);

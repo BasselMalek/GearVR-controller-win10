@@ -5,7 +5,7 @@
 using namespace winrt::Windows;
 
 struct KeyMappings {
-  static INPUT inputs[6];
+  static INPUT inputs[11];
   static void initMappings(std::vector<uint8_t> scanKeys);
 };
 
@@ -51,7 +51,8 @@ private:
           &sender,
       Devices::Bluetooth::GenericAttributeProfile::
           GattValueChangedEventArgs const &args);
-  void keyHandler(std::vector<bool> &keyStates);
+  void keyHandler(std::vector<bool> &keyStates, bool DPAD_MODE);
+  bool dpadState(int xAxis, int yAxis, char direction);
   void touchHandler(int xAxis, int yAxis, int scaleFactor);
   FusionEuler fusionHandler(uint8_t rawBytes[18]);
   void fusionCursor(FusionEuler angles, bool refResetOne, bool refResetTwo);
