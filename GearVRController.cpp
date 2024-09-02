@@ -19,46 +19,6 @@ void KeyMappings::initMappings(std::vector<uint8_t> scanKeys) {
   }
 }
 
-GearVRController::GearVRController(uint64_t address)
-    : deviceObject(
-          Devices::Bluetooth::BluetoothLEDevice::FromBluetoothAddressAsync(
-              address)
-              .get()),
-      deviceServices(deviceObject.GetGattServicesAsync().get().Services()),
-      commsService(deviceServices.GetAt(5)),
-      calibService(deviceServices.GetAt(4)),
-      calibCharac(
-          calibService.GetCharacteristicsAsync().get().Characteristics().GetAt(
-              1)),
-      DATA_TX(
-          commsService.GetCharacteristicsAsync().get().Characteristics().GetAt(
-              0)),
-      COMMAND_RX(
-          commsService.GetCharacteristicsAsync().get().Characteristics().GetAt(
-              1)),
-      currentMode(DEVICE_MODES::OFF),
-      lastStamp(std::chrono::steady_clock::now()), opFlags(std::bitset<4>(0)) {
-  GearVRController::MAC_address = address;
-  FusionOffsetInitialise(&this->fusionOffsetParams, 69);
-  FusionAhrsInitialise(&this->fusionEngine);
-  const FusionAhrsSettings settings = {
-      .convention = FusionConventionNwu,
-      .gain = 0.2f,
-      .gyroscopeRange = 4000.0f,
-      .accelerationRejection = 10.0f,
-      .magneticRejection = 10.0f,
-      .recoveryTriggerPeriod =
-          static_cast<unsigned int>(5 * 69), /* 5 seconds */
-  };
-  FusionAhrsSetSettings(&this->fusionEngine, &settings);
-}
-
-GearVRController::~GearVRController() {
-  if (this->listenerToken) {
-    this->revokeListener();
-  }
-}
-
 Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus
 GearVRController::writeCommand(GearVRController::DEVICE_MODES writeCommand) {
   Storage::Streams::IBuffer send_packet;
@@ -94,6 +54,46 @@ GearVRController::writeCommand(GearVRController::DEVICE_MODES writeCommand) {
   currentMode = writeCommand;
   return COMMAND_RX.WriteValueAsync(send_packet).get();
 }
+
+GearVRController::GearVRController(uint64_t address)
+    : deviceObject(
+          Devices::Bluetooth::BluetoothLEDevice::FromBluetoothAddressAsync(
+              address)
+              .get()),
+      deviceServices(deviceObject.GetGattServicesAsync().get().Services()),
+      commsService(deviceServices.GetAt(5)),
+      calibService(deviceServices.GetAt(4)),
+      calibCharac(
+          calibService.GetCharacteristicsAsync().get().Characteristics().GetAt(
+              1)),
+      DATA_TX(commsService.GetCharacteristicsAsync().get().Characteristics().GetAt(
+              0)),
+      COMMAND_RX(
+          commsService.GetCharacteristicsAsync().get().Characteristics().GetAt(
+              1)),
+      currentMode(DEVICE_MODES::OFF),
+      lastStamp(std::chrono::steady_clock::now()), opFlags(std::bitset<4>(0)) {
+  GearVRController::MAC_address = address;
+  FusionOffsetInitialise(&this->fusionOffsetParams, 69);
+  FusionAhrsInitialise(&this->fusionEngine);
+  const FusionAhrsSettings settings = {
+      .convention = FusionConventionNwu,
+      .gain = 0.3f,
+      .gyroscopeRange = 2000.0f,
+      .accelerationRejection = 0,
+      .magneticRejection = 0,
+      .recoveryTriggerPeriod =
+          static_cast<unsigned int>(5 * 69), /* 5 seconds */
+  };
+  FusionAhrsSetSettings(&this->fusionEngine, &settings);
+}
+
+GearVRController::~GearVRController() {
+  if (this->listenerToken) {
+    this->revokeListener();
+  }
+}
+
 void GearVRController::startListener() {
 
   auto notifyStatus =
@@ -118,28 +118,6 @@ void GearVRController::revokeListener() {
   }
 }
 
-void GearVRController::manualRead() {
-  GearVRController::DEBUG_PRINT_HEXDATAEVENT(
-      this->calibCharac.ReadValueAsync().get().Value().data());
-}
-
-void GearVRController::DEBUG_PRINT_HEXDATAEVENT(uint8_t *buffer) {
-  std::ostringstream convert;
-  for (int a = 0; a < 59; a++) {
-    convert << std::hex << (int)buffer[a];
-  }
-  std::string key_string = convert.str();
-  std::cout << key_string << std::endl;
-}
-
-void GearVRController::DEBUG_PRINT_UUID() {
-  for (auto ser :
-       this->calibService.GetCharacteristicsAsync().get().Characteristics()) {
-    wchar_t struuid[39];
-    auto result = StringFromGUID2(ser.Uuid(), struuid, 39);
-    std::wcout << struuid << std::endl;
-  }
-}
 
 void GearVRController::mainEventHandler(
     Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic const
@@ -271,7 +249,7 @@ void GearVRController::touchHandler(int xAxis, int yAxis, int scaleFactor) {
   mouseInput.mi.dx = (xAxis - xPrev);
   mouseInput.mi.dy = (yAxis - yPrev);
   if ((xAxis != (157 * -scaleFactor) && yAxis != (157 * -scaleFactor) &&
-       xPrev && yPrev)) {
+       xPrev && yPrev)&& abs(xAxis-xPrev)>1 && abs(yAxis-yPrev)>1) {
     mouseInput.mi.dwFlags = MOUSEEVENTF_MOVE;
     SendInput(1, &mouseInput, sizeof(INPUT));
   } else {
@@ -305,21 +283,23 @@ FusionEuler GearVRController::fusionHandler(uint8_t rawBytes[18]) {
   }
   static const FusionMatrix gyroscopeMisalignment = {
       1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-  static const FusionVector gyroscopeSensitivity = {0.75f, 0.75f, 0.75f};
-  static const FusionVector gyroscopeOffset = {2.0f, 2.0f, 2.0f};
+  static const FusionVector gyroscopeSensitivity = {0.35f, 0.35f, 0.35f};
+  static const FusionVector gyroscopeOffset = {0.01f, 0.28f, 0.1f};
   static const FusionMatrix accelerometerMisalignment = {
       1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-  static const FusionVector accelerometerSensitivity = {1.0f, 1.0f, 1.0f};
-  static const FusionVector accelerometerOffset = {0.0f, 0.0f, 0.0f};
+  static const FusionVector accelerometerSensitivity = {0.95f, 1.0f, 1.0f};
+  static const FusionVector accelerometerOffset = {0.00861f, 0.251564,
+                                                   0.991599f};
   static const FusionMatrix softIronMatrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
                                               0.0f, 0.0f, 0.0f, 1.0f};
-  static const FusionVector hardIronOffset = {0.0f, 0.0f, 0.0f};
+  static const FusionVector hardIronOffset = {100.0f, 20.0f, 15.700000f};
 
   float timeDelta = (float)(clock - this->lastStamp).count() / 1000000000.0F;
   FusionVector accelerometer = {scaledValues[0], scaledValues[1],
                                 scaledValues[2]};
   FusionVector gyroscope = {scaledValues[3], scaledValues[4], scaledValues[5]};
   FusionVector mag = {scaledValues[6], scaledValues[7], scaledValues[8]};
+
   gyroscope = FusionCalibrationInertial(gyroscope, gyroscopeMisalignment,
                                         gyroscopeSensitivity, gyroscopeOffset);
   accelerometer =
@@ -332,51 +312,78 @@ FusionEuler GearVRController::fusionHandler(uint8_t rawBytes[18]) {
   this->lastStamp = clock;
   auto result =
       FusionQuaternionToEuler(FusionAhrsGetQuaternion(&this->fusionEngine));
+
+  //printf("R:%0.00f, P:%0.00f, Y:%0.00f\n", result.angle.pitch, result.angle.roll,
+  //       result.angle.yaw);
   return result;
 }
 
 void GearVRController::fusionCursor(FusionEuler angles, bool refResetOne,
                                     bool refResetTwo) {
   static int initLaunch = 1;
-  static int pitchOffset = 0, yawOffset = 0;
-  static int prevPitch = 0, prevYaw = 0;
+  static float pitchOffset = 0, yawOffset = 0;
+  static float prevPitch = 0, prevYaw = 0;
   static INPUT fusionInput = {};
   fusionInput.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
   static int xAxis = 32767, yAxis = 32767;
   if ((refResetOne && refResetTwo) || initLaunch) {
     pitchOffset = angles.angle.roll;
-    yawOffset = angles.angle.yaw;
+    yawOffset = angles.angle.pitch;
     fusionInput.mi.dx = xAxis;
     fusionInput.mi.dy = yAxis;
     SendInput(1, &fusionInput, sizeof(INPUT));
     initLaunch = 0;
   } else {
-    if ((angles.angle.roll - pitchOffset) < -60) {
+    angles.angle.roll = (abs(prevPitch - angles.angle.roll) > 0.2)
+                            ? angles.angle.roll
+                            : prevPitch;
+    angles.angle.pitch = (abs(prevYaw - angles.angle.pitch) > 0.2)
+                            ? angles.angle.pitch
+                            : prevYaw;
+    if ((angles.angle.roll - pitchOffset) < -45) {
       yAxis = 0;
-    } else if ((angles.angle.roll - pitchOffset) > 60) {
+    } else if ((angles.angle.roll - pitchOffset) > 45) {
       yAxis = 32767;
     } else {
-      yAxis = (angles.angle.roll - prevPitch < 1)
-                  ? prevPitch
-                  : -(angles.angle.roll - pitchOffset) * 1092;
+      yAxis =  -(angles.angle.roll - pitchOffset) * 1456;
     }
-    if ((angles.angle.yaw - yawOffset) < -80) {
+    if ((angles.angle.pitch - yawOffset) < -45) {
       xAxis = 0;
-    } else if ((angles.angle.yaw - yawOffset) > 80) {
+    } else if ((angles.angle.pitch - yawOffset) > 45) {
       xAxis = 32767;
     } else {
-      xAxis = (abs(angles.angle.yaw - prevYaw) < 10)
-                  ? prevYaw
-                  : -(angles.angle.yaw - yawOffset) * 728;
+      xAxis = (angles.angle.pitch - yawOffset) * 1456;
     }
     fusionInput.mi.dx = xAxis + 32767;
     fusionInput.mi.dy = yAxis + 32767;
-    prevPitch = angles.angle.roll - pitchOffset;
-    prevYaw = angles.angle.yaw - yawOffset;
+    prevPitch = angles.angle.roll;
+    prevYaw = angles.angle.pitch;
     SendInput(1, &fusionInput, sizeof(INPUT));
   }
 }
 
+void GearVRController::manualRead() {
+  GearVRController::DEBUG_PRINT_HEXDATAEVENT(
+      this->calibCharac.ReadValueAsync().get().Value().data());
+}
+
+void GearVRController::DEBUG_PRINT_HEXDATAEVENT(uint8_t *buffer) {
+  std::ostringstream convert;
+  for (int a = 0; a < 59; a++) {
+    convert << std::hex << (int)buffer[a];
+  }
+  std::string key_string = convert.str();
+  std::cout << key_string << std::endl;
+}
+
+void GearVRController::DEBUG_PRINT_UUID() {
+  for (auto ser :
+       this->calibService.GetCharacteristicsAsync().get().Characteristics()) {
+    wchar_t struuid[39];
+    auto result = StringFromGUID2(ser.Uuid(), struuid, 39);
+    std::wcout << struuid << std::endl;
+  }
+}
 // MiscExtraData ControllerData::returnMiscExtra() {
 //   ControllerData::fullRefresh();
 //   float temp_timestamp =
