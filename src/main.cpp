@@ -61,7 +61,7 @@ int main() {
     if (generateCleanIni(&configIniFile, strtouhex(adrstr))) {
       std::cout << "config.ini successfully created!\nYou can modify the "
                    "keybindings there according to "
-                   "https://learn.microsoft.com/en-us/windows/win32/virtual-key-codes." 
+                   "https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes \n" 
                    "Restart the app to use the controller.";
     } else {
       std::cout << "ini file creation failed. Try again.";
