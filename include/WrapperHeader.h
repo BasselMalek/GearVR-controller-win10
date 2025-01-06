@@ -15,7 +15,7 @@
 #include <WinUser.h>
 #include <windows.h>
 
-// C++/Winrt headers.
+// C++/WinRT headers.
 #include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
 #include <winrt/Windows.Devices.Bluetooth.h>
 #include <winrt/Windows.Devices.Enumeration.h>
@@ -26,6 +26,6 @@
 #include <winrt/Windows.Storage.h>
 
 // 3rd party packages
-#include "Fusion/Fusion.h"
+#include <Fusion.h>
 // #include "cli/cli.h"
-#include "ini/ini.h"
+#include <ini.h>

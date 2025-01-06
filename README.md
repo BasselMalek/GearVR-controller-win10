@@ -15,3 +15,11 @@ My personal take on interfacing with the Samsung GearVR Contoller on PC.
 - @jsyang for their extensive documentation on their reverse engineering process.
 - @xioTechnologies for their implementation of the Magdwick fusion algorithm.
 - @metayeti for their handy .ini library.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### Third Party Licenses
+
+This project uses third-party libraries which are distributed under their own terms. See [NOTICE](NOTICE) for details.

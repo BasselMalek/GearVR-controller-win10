@@ -15,19 +15,19 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GearVRController.cpp">
+    <ClCompile Include="src\GearVRController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="include\Fusion\FusionAhrs.c">
+    <ClCompile Include="external\Fusion\Fusion\FusionAhrs.c">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="include\Fusion\FusionCompass.c">
+    <ClCompile Include="external\Fusion\Fusion\FusionCompass.c">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="include\Fusion\FusionOffset.c">
+    <ClCompile Include="external\Fusion\Fusion\FusionOffset.c">
       <Filter>Header Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -35,88 +35,38 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="WrapperHeader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="GearVRController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ini.h">
+    <ClInclude Include="include\WrapperHeader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Fusion\Fusion.h">
+    <ClInclude Include="external\Fusion\Fusion\Fusion.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Fusion\FusionAhrs.h">
+    <ClInclude Include="external\Fusion\Fusion\FusionAhrs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Fusion\FusionAxes.h">
+    <ClInclude Include="external\Fusion\Fusion\FusionAxes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Fusion\FusionCalibration.h">
+    <ClInclude Include="external\Fusion\Fusion\FusionCalibration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Fusion\FusionCompass.h">
+    <ClInclude Include="external\Fusion\Fusion\FusionCompass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Fusion\FusionConvention.h">
+    <ClInclude Include="external\Fusion\Fusion\FusionConvention.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Fusion\FusionMath.h">
+    <ClInclude Include="external\Fusion\Fusion\FusionMath.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Fusion\FusionOffset.h">
+    <ClInclude Include="external\Fusion\Fusion\FusionOffset.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\cli\boostasiocliasyncsession.h">
+    <ClInclude Include="external\mINI\src\mini\ini.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\cli\boostasioremotecli.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\boostasioscheduler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\cli.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\clifilesession.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\clilocalsession.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\colorprofile.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\filehistorystorage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\historystorage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\loopscheduler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\scheduler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\standaloneasiocliasyncsession.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\standaloneasioremotecli.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\standaloneasioscheduler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cli\volatilehistorystorage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="include\Fusion\CMakeLists.txt">
-      <Filter>Header Files</Filter>
-    </Text>
   </ItemGroup>
 </Project>
