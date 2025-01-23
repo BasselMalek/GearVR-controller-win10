@@ -4,8 +4,6 @@
 
 using namespace winrt::Windows;
 
-INPUT KeyMappings::inputs[11] = {};
-
 void KeyMappings::initMappings(std::vector<uint8_t> scanKeys) {
   for (int i = 0; i < 11; i++) {
     if (scanKeys[i] == 0x01 || scanKeys[i] == 0x02) {
@@ -55,7 +53,8 @@ GearVRController::writeCommand(GearVRController::DEVICE_MODES writeCommand) {
   return COMMAND_RX.WriteValueAsync(send_packet).get();
 }
 
-GearVRController::GearVRController(uint64_t address)
+GearVRController::GearVRController(uint64_t address, std::vector<uint8_t>iniKeys,
+                                   FusionSettings iniSettings)
     : deviceObject(
           Devices::Bluetooth::BluetoothLEDevice::FromBluetoothAddressAsync(
               address)
@@ -73,18 +72,20 @@ GearVRController::GearVRController(uint64_t address)
           commsService.GetCharacteristicsAsync().get().Characteristics().GetAt(
               1)),
       currentMode(DEVICE_MODES::OFF),
-      lastStamp(std::chrono::steady_clock::now()), opFlags(std::bitset<4>(0)) {
-  GearVRController::MAC_address = address;
+      lastStamp(std::chrono::steady_clock::now()), opFlags(std::bitset<4>(0)), fusionSettings(iniSettings) {
+  this->MAC_address = address;
+  this->buttonMappings.initMappings(iniKeys);
   FusionOffsetInitialise(&this->fusionOffsetParams, 69);
   FusionAhrsInitialise(&this->fusionEngine);
   const FusionAhrsSettings settings = {
-      .convention = FusionConventionEnu,
-      .gain = 0.585f,
-      .gyroscopeRange = 1000.0f,
-      .accelerationRejection = 0.98f,
-      .magneticRejection = 0.55f,
-      .recoveryTriggerPeriod =
-          static_cast<unsigned int>(5 * 69), /* 5 seconds */
+    .convention = FusionConventionEnu,
+    .gain = this->fusionSettings.sensorGain,
+    .gyroscopeRange = 1000.0f,
+    .accelerationRejection = this->fusionSettings.rejectAccel,
+    .magneticRejection = this->fusionSettings.rejectMagnet,
+    .recoveryTriggerPeriod = this->fusionSettings.rejectEnable
+                                 ? static_cast<unsigned int>(5 * 69) /* 5 seconds */
+                                 : 0,
   };
   FusionAhrsSetSettings(&this->fusionEngine, &settings);
 }
@@ -177,26 +178,26 @@ void GearVRController::keyHandler(std::vector<bool> &keyStates,
       continue;
     }
     if (keyStates[i] && !prev[i]) {
-      if (KeyMappings::inputs[i].type == INPUT_MOUSE) {
-        SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
+      if (this->buttonMappings.inputs[i].type == INPUT_MOUSE) {
+        SendInput(1, &this->buttonMappings.inputs[i], sizeof(INPUT));
       } else {
-        KeyMappings::inputs[i].ki.dwFlags = 0;
-        SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
+        this->buttonMappings.inputs[i].ki.dwFlags = 0;
+        SendInput(1, &this->buttonMappings.inputs[i], sizeof(INPUT));
       }
     } else if (!keyStates[i] && prev[i]) {
-      if (KeyMappings::inputs[i].type == INPUT_MOUSE) {
+      if (this->buttonMappings.inputs[i].type == INPUT_MOUSE) {
         // This is a very lazy implementation that prevents further mouse
         // mappings, should be changed later.
-        KeyMappings::inputs[i].mi.dwFlags =
-            KeyMappings::inputs[i].ki.wVk == 0x01 ? MOUSEEVENTF_LEFTUP
+        this->buttonMappings.inputs[i].mi.dwFlags =
+            this->buttonMappings.inputs[i].ki.wVk == 0x01 ? MOUSEEVENTF_LEFTUP
                                                   : MOUSEEVENTF_RIGHTUP;
-        SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
-        KeyMappings::inputs[i].mi.dwFlags =
-            KeyMappings::inputs[i].ki.wVk == 0x01 ? MOUSEEVENTF_LEFTDOWN
+        SendInput(1, &this->buttonMappings.inputs[i], sizeof(INPUT));
+        this->buttonMappings.inputs[i].mi.dwFlags =
+            this->buttonMappings.inputs[i].ki.wVk == 0x01 ? MOUSEEVENTF_LEFTDOWN
                                                   : MOUSEEVENTF_RIGHTDOWN;
       } else {
-        KeyMappings::inputs[i].ki.dwFlags = KEYEVENTF_KEYUP;
-        SendInput(1, &KeyMappings::inputs[i], sizeof(INPUT));
+        this->buttonMappings.inputs[i].ki.dwFlags = KEYEVENTF_KEYUP;
+        SendInput(1, &this->buttonMappings.inputs[i], sizeof(INPUT));
       }
     }
   }
@@ -264,10 +265,8 @@ void GearVRController::touchHandler(int xAxis, int yAxis, int scaleFactor) {
 
 FusionQuaternion GearVRController::fusionHandler(uint8_t rawBytes[18]) {
   auto clock = std::chrono::steady_clock::now();
-  static float scaledValues[9] = {
-      0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-  };
-  for (int i = 0; i < 9; i++) {
+  static float scaledValues[9];
+  for (int i = 0; i < (this->fusionSettings.magnetEnable?9:6); i++) {
     short int combinedFromBuffer =
         ((rawBytes[2 * i + 1] << 8) | rawBytes[2 * i]);
     if (i < 3) {
@@ -284,44 +283,56 @@ FusionQuaternion GearVRController::fusionHandler(uint8_t rawBytes[18]) {
       scaledValues[i] = static_cast<float>(combinedFromBuffer * 0.06F);
     }
   }
-  // for (int i = 2; i < 9;  i+=3) {
-  //   std::cout << scaledValues[i - 2] << ", " << scaledValues[i - 1] << ", "
-  //             << scaledValues[i] << "\n";
-  // }
-  static const FusionMatrix gyroscopeMisalignment = {
-      1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-  static const FusionVector gyroscopeSensitivity = {1, 1, 1};
-  static const FusionVector gyroscopeOffset = {0, 0, 0};
-  static const FusionMatrix accelerometerMisalignment = {
-      1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-  static const FusionVector accelerometerSensitivity = {1, 1.0f, 1.0f};
-  static const FusionVector accelerometerOffset = {0, 0, 0};
-  static const FusionMatrix softIronMatrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-                                              0.0f, 0.0f, 0.0f, 1.0f};
-  static const FusionVector hardIronOffset = {0, 0, 0};
 
   float timeDelta = (float)(clock - this->lastStamp).count() / 1000000000.0F;
   FusionVector accelerometer = {scaledValues[0], scaledValues[1],
                                 scaledValues[2]};
   FusionVector gyroscope = {scaledValues[3], scaledValues[4], scaledValues[5]};
-  FusionVector mag = {scaledValues[6], scaledValues[7], scaledValues[8]};
 
-  gyroscope = FusionCalibrationInertial(gyroscope, gyroscopeMisalignment,
-                                        gyroscopeSensitivity, gyroscopeOffset);
-  accelerometer =
-      FusionCalibrationInertial(accelerometer, accelerometerMisalignment,
-                                accelerometerSensitivity, accelerometerOffset);
-  mag = FusionCalibrationMagnetic(mag, softIronMatrix, hardIronOffset);
+  gyroscope = FusionCalibrationInertial(
+      gyroscope, {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
+      FusionVector{
+          this->fusionSettings.gyroSens[0],
+          this->fusionSettings.gyroSens[1],
+          this->fusionSettings.gyroSens[2],
+      },
+      FusionVector{
+          this->fusionSettings.gyroOffset[0],
+          this->fusionSettings.gyroOffset[1],
+          this->fusionSettings.gyroOffset[2],
+      });
+  accelerometer = FusionCalibrationInertial(
+      accelerometer, {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
+      FusionVector{
+          this->fusionSettings.accelSens[0],
+          this->fusionSettings.accelSens[1],
+          this->fusionSettings.accelSens[2],
+      },
+      FusionVector{
+          this->fusionSettings.accelOffset[0],
+          this->fusionSettings.accelOffset[1],
+          this->fusionSettings.accelOffset[2],
+      });
   gyroscope = FusionOffsetUpdate(&this->fusionOffsetParams, gyroscope);
-  FusionAhrsUpdate(&this->fusionEngine, gyroscope, accelerometer, mag,
+  if (this->fusionSettings.magnetEnable) {
+    FusionAhrsUpdate(
+        &this->fusionEngine, gyroscope, accelerometer,
+        FusionCalibrationMagnetic(
+            FusionVector{scaledValues[6], scaledValues[7], scaledValues[8]},
+            {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
+            FusionVector{
+                this->fusionSettings.magnetOffset[0],
+                this->fusionSettings.magnetOffset[1],
+                this->fusionSettings.magnetOffset[2],
+            }),
+                   timeDelta);
+  } else {
+  FusionAhrsUpdateNoMagnetometer(&this->fusionEngine, gyroscope, accelerometer,
                    timeDelta);
   this->lastStamp = clock;
+  }
 
   return FusionAhrsGetQuaternion(&this->fusionEngine);
-
-  // printf("R:%0.00f, P:%0.00f, Y:%0.00f\n", result.angle.pitch,
-  // result.angle.roll,
-  //        result.angle.yaw);
 }
 
 void GearVRController::fusionCursor(FusionEuler angles, bool refResetOne,
@@ -382,31 +393,23 @@ void GearVRController::fusionCursor(FusionQuaternion quat, bool refResetOne,
     SendInput(1, &fusionInput, sizeof(INPUT));
     initLaunch = 0;
   } else {
-    currYaw = ((std::atan2(2.0 * (quat.element.w * quat.element.z +
-                                  quat.element.x * quat.element.y),
-                           1.0 - 2.0 * (quat.element.y * quat.element.y +
-                                        quat.element.z * quat.element.z))) +
-               M_PI)/(2*M_PI);
-    //currPitch = ((asin(2.0 * (quat.element.w * quat.element.y -
-    //                          quat.element.z * quat.element.x))) +
-    //             (M_PI / 2))/M_PI;
-    currPitch = (std::atan2(2.0 * (quat.element.w * quat.element.x +
-                                   quat.element.y * quat.element.z),
-                            1.0 - 2.0 * (quat.element.x * quat.element.x +
-                                         quat.element.y * quat.element.y)) /
-             (2 * M_PI) +
-         1.0);
+    currYaw = atan2(2 * (quat.element.w * quat.element.z + quat.element.x * quat.element.y),
+                    1 - 2 * (quat.element.y * quat.element.y + quat.element.z * quat.element.z)) /
+              M_PI;
+    currPitch = std::atan2(2 * (quat.element.w * quat.element.x +
+                                quat.element.y * quat.element.z),
+                           1 - 2 * (quat.element.x * quat.element.x +
+                                    quat.element.y * quat.element.y)) /
+                M_PI;
 
-    currYaw = 2*currYaw - 1;
-    currPitch = 2*currPitch- 1;
-    fusionInput.mi.dx = currYaw-prevYaw>=0.95f?0:-(currYaw - prevYaw)*2000;
+    currYaw = std::round(1000*currYaw);
+    currPitch = std::round(1000 * currPitch);
+    fusionInput.mi.dx = std::abs(currYaw-prevYaw)>=1000?0:-(currYaw - prevYaw)*5;
     fusionInput.mi.dy =
-        currPitch - prevPitch >= 0.95f ? 0 : -(currPitch - prevPitch) * 2000;
+        std::abs(currPitch - prevPitch) >= 1000 ? 0 : -(currPitch - prevPitch) * 5;
     SendInput(1, &fusionInput, sizeof(INPUT));
     prevYaw = currYaw;
     prevPitch = currPitch;
-    std::cout << currYaw << " " << currPitch << std::endl;
-    //std::cout << fusionInput.mi.dx << " " << fusionInput.mi.dy << std::endl;
   }
 }
 

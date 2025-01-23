@@ -16,6 +16,27 @@ bool generateCleanIni(mINI::INIFile *ptrIni, uint64_t controllerAddress) {
   SECTIONTEMPLATE["buttons"]["touchpad-down"] = "0x28";
   SECTIONTEMPLATE["buttons"]["touchpad-right"] = "0x27";
   SECTIONTEMPLATE["buttons"]["touchpad-left"] = "0x25";
+  SECTIONTEMPLATE["engine-params"]["sensor-gain"] = "0.5";
+  SECTIONTEMPLATE["engine-params"]["magnet-enable"] = "1";
+  SECTIONTEMPLATE["engine-params"]["reject-enable"] = "1";
+  SECTIONTEMPLATE["engine-params"]["reject-accel"] = "0.5";
+  SECTIONTEMPLATE["engine-params"]["reject-magnet"] = "0.5";
+  SECTIONTEMPLATE["sensor-params"]["gyro-sens-x"] = "1";
+  SECTIONTEMPLATE["sensor-params"]["gyro-sens-y"] = "1";
+  SECTIONTEMPLATE["sensor-params"]["gyro-sens-z"] = "1";
+  SECTIONTEMPLATE["sensor-params"]["gyro-offset-x"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["gyro-offset-y"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["gyro-offset-z"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["accel-sens-x"] = "1";
+  SECTIONTEMPLATE["sensor-params"]["accel-sens-y"] = "1";
+  SECTIONTEMPLATE["sensor-params"]["accel-sens-z"] = "1";
+  SECTIONTEMPLATE["sensor-params"]["accel-offset-x"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["accel-offset-y"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["accel-offset-z"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["magnet-offset-x"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["magnet-offset-y"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["magnet-offset-z"] = "0";
+
   return ptrIni->generate(SECTIONTEMPLATE);
 }
 
@@ -61,19 +82,48 @@ int main() {
     if (generateCleanIni(&configIniFile, strtouhex(adrstr))) {
       std::cout << "config.ini successfully created!\nYou can modify the "
                    "keybindings there according to "
-                   "https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes \n" 
+                   "https://learn.microsoft.com/en-us/windows/win32/inputdev/"
+                   "virtual-key-codes \n"
                    "Restart the app to use the controller.";
     } else {
       std::cout << "ini file creation failed. Try again.";
     }
   } else {
-    GearVRController ControllerObject =
-        GearVRController(strtouhex(configIni["mac"]["address"]));
     std::vector<uint8_t> keys;
     for (auto &const keyValue : configIni.get("buttons")) {
       keys.push_back(strtouhex(configIni["buttons"][keyValue.first]));
     }
-    KeyMappings::initMappings(keys);
+    GearVRController ControllerObject = GearVRController(
+        strtouhex(configIni["mac"]["address"]), keys,
+        FusionSettings{
+            .sensorGain = std::stof(configIni["engine-params"]["sensor-gain"]),
+            .magnetEnable =
+                (configIni["engine-params"]["magnet-enable"] == "1"),
+            .rejectEnable =
+                (configIni["engine-params"]["reject-enable"] == "1"),
+            .rejectAccel =
+                std::stof(configIni["engine-params"]["reject-accel"]),
+            .rejectMagnet =
+                std::stof(configIni["engine-params"]["reject-magnet"]),
+            .gyroSens = {std::stof(configIni["sensor-params"]["gyro-sens-x"]),
+                         std::stof(configIni["sensor-params"]["gyro-sens-y"]),
+                         std::stof(configIni["sensor-params"]["gyro-sens-z"])},
+            .gyroOffset =
+                {std::stof(configIni["sensor-params"]["gyro-offset-x"]),
+                 std::stof(configIni["sensor-params"]["gyro-offset-y"]),
+                 std::stof(configIni["sensor-params"]["gyro-offset-z"])},
+            .accelSens = {std::stof(configIni["sensor-params"]["accel-sens-x"]),
+                          std::stof(configIni["sensor-params"]["accel-sens-y"]),
+                          std::stof(
+                              configIni["sensor-params"]["accel-sens-z"])},
+            .accelOffset =
+                {std::stof(configIni["sensor-params"]["accel-offset-x"]),
+                 std::stof(configIni["sensor-params"]["accel-offset-y"]),
+                 std::stof(configIni["sensor-params"]["accel-offset-z"])},
+            .magnetOffset = {
+                std::stof(configIni["sensor-params"]["magnet-offset-x"]),
+                std::stof(configIni["sensor-params"]["magnet-offset-y"]),
+                std::stof(configIni["sensor-params"]["magnet-offset-z"])}});
     ControllerObject.writeCommand(GearVRController::VR);
     ControllerObject.writeCommand(GearVRController::SENSORS);
     std::cout << "Note: Fusion and touchpad cannot be turned on at the same "

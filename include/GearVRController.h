@@ -5,8 +5,21 @@
 using namespace winrt::Windows;
 
 struct KeyMappings {
-  static INPUT inputs[11];
-  static void initMappings(std::vector<uint8_t> scanKeys);
+  INPUT inputs[11];
+  void initMappings(std::vector<uint8_t> scanKeys);
+};
+
+struct FusionSettings {
+  float sensorGain;
+  bool magnetEnable;
+  bool rejectEnable;
+  float rejectAccel;
+  float rejectMagnet;
+  float gyroSens[3];
+  float gyroOffset[3];
+  float accelSens[3];
+  float accelOffset[3];
+  float magnetOffset[3];
 };
 
 // Main class for read/write and I/O
@@ -15,7 +28,7 @@ public:
   // Possible controller modes.
   enum DEVICE_MODES { OFF, SENSORS, VR, CALIBRATE, KEEPAWAKE };
 
-  GearVRController(uint64_t addr);
+  GearVRController(uint64_t addr, std::vector<uint8_t> iniKeys, FusionSettings iniSettings);
   ~GearVRController();
 
   Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus
@@ -31,6 +44,8 @@ private:
   uint64_t MAC_address;
   DEVICE_MODES currentMode;
   winrt::event_token listenerToken;
+  KeyMappings buttonMappings;
+  FusionSettings fusionSettings;
   FusionAhrs fusionEngine;
   FusionOffset fusionOffsetParams;
 
