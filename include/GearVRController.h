@@ -54,8 +54,9 @@ private:
   void keyHandler(std::vector<bool> &keyStates, bool DPAD_MODE);
   bool dpadState(int xAxis, int yAxis, char direction);
   void touchHandler(int xAxis, int yAxis, int scaleFactor);
-  FusionEuler fusionHandler(uint8_t rawBytes[18]);
+  FusionQuaternion fusionHandler(uint8_t rawBytes[18]);
   void fusionCursor(FusionEuler angles, bool refResetOne, bool refResetTwo);
+  void fusionCursor(FusionQuaternion quat, bool refResetOne, bool refResetTwo);
   void DEBUG_PRINT_HEXDATAEVENT(uint8_t *buffer);
   void DEBUG_PRINT_UUID();
 };
