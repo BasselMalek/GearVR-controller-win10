@@ -7,39 +7,12 @@ A Windows interface implementation for the Samsung GearVR Controller.
 > In this release, hardcoded calibration parameters have been moved to the configuration file (`config.ini`).
 > Users must manually append the parameters from the code into two new sections in their `.ini` file to ensure proper functionality as follows.
 >
-> ### Example Configuration (`config.ini`)
->
-> ```
-> [engine-params]
-> sensor-gain=0.585
-> magnet-enable=0
-> reject-enable=0
-> reject-accel=0.01
-> reject-magnet=0.15
->
-> [sensor-params]
-> gyro-sens-x=0.85
-> gyro-sens-y=0.95
-> gyro-sens-z=0.95
-> gyro-offset-x=0.7548
-> gyro-offset-y=0.7402
-> gyro-offset-z=1.1433
-> accel-sens-x=0.1
-> accel-sens-y=0.85
-> accel-sens-z=0.85
-> accel-offset-x=0
-> accel-offset-y=0
-> accel-offset-z=0
-> magnet-offset-x=0
-> magnet-offset-y=0
-> magnet-offset-z=0
-> ```
->
 > ### Migration Steps:
 >
-> 1. Copy the above keys into `config.ini` in your project directory.
-> 2. Ensure all required fields match the previous hardcoded values in your project.
-> 3. Restart the application to apply the changes.
+> 1. Save the keybindings in the old `.ini` and any calibration numbers somewhere safe and delete the file.
+> 2. Generate the `.ini` file again by running the program and inputing your MAC.
+> 3. Fill in the keybindings, sensitivities, and calibration data in the new `.ini` file from the previous hardcoded values in your project or further calibrate your controller if needed.
+> 4. Restart the application to apply the changes.
 
 ## Getting Started
 

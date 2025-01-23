@@ -16,6 +16,8 @@ bool generateCleanIni(mINI::INIFile *ptrIni, uint64_t controllerAddress) {
   SECTIONTEMPLATE["buttons"]["touchpad-down"] = "0x28";
   SECTIONTEMPLATE["buttons"]["touchpad-right"] = "0x27";
   SECTIONTEMPLATE["buttons"]["touchpad-left"] = "0x25";
+  SECTIONTEMPLATE["cursors"]["fusion-sens"] = "5";
+  SECTIONTEMPLATE["cursors"]["touchpad-sens"] = "5";
   SECTIONTEMPLATE["engine-params"]["sensor-gain"] = "0.5";
   SECTIONTEMPLATE["engine-params"]["magnet-enable"] = "1";
   SECTIONTEMPLATE["engine-params"]["reject-enable"] = "1";
@@ -96,6 +98,9 @@ int main() {
     GearVRController ControllerObject = GearVRController(
         strtouhex(configIni["mac"]["address"]), keys,
         FusionSettings{
+            .fusionCursorSens =
+                std::stof(configIni["cursors"]["fusion-sens"]),
+        .touchCursorSens= std::stof(configIni["cursors"]["touchpad-sens"]),
             .sensorGain = std::stof(configIni["engine-params"]["sensor-gain"]),
             .magnetEnable =
                 (configIni["engine-params"]["magnet-enable"] == "1"),

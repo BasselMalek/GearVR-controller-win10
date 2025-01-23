@@ -1,6 +1,5 @@
 #include "GearVRController.h"
 #include "WrapperHeader.h"
-#define SCALING_FACTOR 5
 
 using namespace winrt::Windows;
 
@@ -157,7 +156,7 @@ void GearVRController::mainEventHandler(
     GearVRController::fusionCursor(fusionResult, states[0], states[3]);
   }
   if (GearVRController::opFlags[1]) {
-    GearVRController::touchHandler(touchXAxis, touchYAxis, SCALING_FACTOR);
+    GearVRController::touchHandler(touchXAxis, touchYAxis);
   }
   if (GearVRController::opFlags[2]) {
     // Prevent fusion cursor re-center combination from executing presses.
@@ -243,15 +242,15 @@ bool GearVRController::dpadState(int xAxis, int yAxis, char direction) {
   }
 }
 
-void GearVRController::touchHandler(int xAxis, int yAxis, int scaleFactor) {
+void GearVRController::touchHandler(int xAxis, int yAxis) {
   static int xPrev = 0, yPrev = 0;
-  xAxis = (xAxis * scaleFactor) - (157 * scaleFactor);
-  yAxis = (yAxis * scaleFactor) - (157 * scaleFactor);
+  xAxis = (xAxis * this->fusionSettings.touchCursorSens) - (157 * this->fusionSettings.touchCursorSens);
+  yAxis = (yAxis * this->fusionSettings.touchCursorSens) - (157 * this->fusionSettings.touchCursorSens);
   static INPUT mouseInput = {};
   mouseInput.type = INPUT_MOUSE;
   mouseInput.mi.dx = (xAxis - xPrev);
   mouseInput.mi.dy = (yAxis - yPrev);
-  if ((xAxis != (157 * -scaleFactor) && yAxis != (157 * -scaleFactor) &&
+  if ((xAxis != (157 * -this->fusionSettings.touchCursorSens) && yAxis != (157 * -this->fusionSettings.touchCursorSens) &&
        xPrev && yPrev) &&
       abs(xAxis - xPrev) > 1 && abs(yAxis - yPrev) > 1) {
     mouseInput.mi.dwFlags = MOUSEEVENTF_MOVE;
@@ -259,8 +258,8 @@ void GearVRController::touchHandler(int xAxis, int yAxis, int scaleFactor) {
   } else {
     mouseInput.mi.dwFlags = 0;
   }
-  xPrev = (xAxis == (157 * -scaleFactor)) ? 0 : xAxis;
-  yPrev = (yAxis == (157 * -scaleFactor)) ? 0 : yAxis;
+  xPrev = (xAxis == (157 * -this->fusionSettings.touchCursorSens)) ? 0 : xAxis;
+  yPrev = (yAxis == (157 * -this->fusionSettings.touchCursorSens)) ? 0 : yAxis;
 }
 
 FusionQuaternion GearVRController::fusionHandler(uint8_t rawBytes[18]) {
@@ -381,7 +380,7 @@ void GearVRController::fusionCursor(FusionEuler angles, bool refResetOne,
 
 void GearVRController::fusionCursor(FusionQuaternion quat, bool refResetOne,
                                     bool refResetTwo) {
-  static int initLaunch = 1;
+  static bool initLaunch = 1;
   static double currPitch = 0, currYaw = 0;
   static double prevPitch = 0, prevYaw = 0;
   static INPUT fusionInput = {};
@@ -404,9 +403,11 @@ void GearVRController::fusionCursor(FusionQuaternion quat, bool refResetOne,
 
     currYaw = std::round(1000*currYaw);
     currPitch = std::round(1000 * currPitch);
-    fusionInput.mi.dx = std::abs(currYaw-prevYaw)>=1000?0:-(currYaw - prevYaw)*5;
+    fusionInput.mi.dx = std::abs(currYaw-prevYaw)>=1000?0:-(currYaw - prevYaw)*this->fusionSettings.fusionCursorSens;
     fusionInput.mi.dy =
-        std::abs(currPitch - prevPitch) >= 1000 ? 0 : -(currPitch - prevPitch) * 5;
+        std::abs(currPitch - prevPitch) >= 1000
+            ? 0
+            : -(currPitch - prevPitch) * this->fusionSettings.fusionCursorSens;
     SendInput(1, &fusionInput, sizeof(INPUT));
     prevYaw = currYaw;
     prevPitch = currPitch;

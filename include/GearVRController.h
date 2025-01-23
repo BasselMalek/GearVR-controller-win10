@@ -10,6 +10,8 @@ struct KeyMappings {
 };
 
 struct FusionSettings {
+  float fusionCursorSens;
+  float touchCursorSens;
   float sensorGain;
   bool magnetEnable;
   bool rejectEnable;
@@ -68,7 +70,7 @@ private:
           GattValueChangedEventArgs const &args);
   void keyHandler(std::vector<bool> &keyStates, bool DPAD_MODE);
   bool dpadState(int xAxis, int yAxis, char direction);
-  void touchHandler(int xAxis, int yAxis, int scaleFactor);
+  void touchHandler(int xAxis, int yAxis);
   FusionQuaternion fusionHandler(uint8_t rawBytes[18]);
   void fusionCursor(FusionEuler angles, bool refResetOne, bool refResetTwo);
   void fusionCursor(FusionQuaternion quat, bool refResetOne, bool refResetTwo);
