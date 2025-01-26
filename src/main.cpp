@@ -1,177 +1,149 @@
-#include "GearVRController.h"
-#include "WrapperHeader.h"
+// wxWidgets "Hello World" Program
 
-bool generateCleanIni(mINI::INIFile *ptrIni, uint64_t controllerAddress) {
+// For compilers that support precompilation, includes "wx/wx.h".
+#include <wx/taskbar.h>
+#include <wx/wxprec.h>
+#include <wx/app.h>
 
-  static mINI::INIStructure SECTIONTEMPLATE;
-  SECTIONTEMPLATE["mac"]["address"] = std::to_string(controllerAddress);
-  SECTIONTEMPLATE["buttons"]["trigger"] = "0x01";
-  SECTIONTEMPLATE["buttons"]["home"] = "0x5B";
-  SECTIONTEMPLATE["buttons"]["back"] = "0x08";
-  SECTIONTEMPLATE["buttons"]["touchpad-single"] = "0x02";
-  SECTIONTEMPLATE["buttons"]["vol-up"] = "0xAF";
-  SECTIONTEMPLATE["buttons"]["vol-down"] = "0xAE";
-  SECTIONTEMPLATE["buttons"]["touchpad-center"] = "0x02";
-  SECTIONTEMPLATE["buttons"]["touchpad-up"] = "0x26";
-  SECTIONTEMPLATE["buttons"]["touchpad-down"] = "0x28";
-  SECTIONTEMPLATE["buttons"]["touchpad-right"] = "0x27";
-  SECTIONTEMPLATE["buttons"]["touchpad-left"] = "0x25";
-  SECTIONTEMPLATE["cursors"]["fusion-sens"] = "5";
-  SECTIONTEMPLATE["cursors"]["touchpad-sens"] = "5";
-  SECTIONTEMPLATE["engine-params"]["sensor-gain"] = "0.5";
-  SECTIONTEMPLATE["engine-params"]["magnet-enable"] = "1";
-  SECTIONTEMPLATE["engine-params"]["reject-enable"] = "1";
-  SECTIONTEMPLATE["engine-params"]["reject-accel"] = "0.5";
-  SECTIONTEMPLATE["engine-params"]["reject-magnet"] = "0.5";
-  SECTIONTEMPLATE["sensor-params"]["gyro-sens-x"] = "1";
-  SECTIONTEMPLATE["sensor-params"]["gyro-sens-y"] = "1";
-  SECTIONTEMPLATE["sensor-params"]["gyro-sens-z"] = "1";
-  SECTIONTEMPLATE["sensor-params"]["gyro-offset-x"] = "0";
-  SECTIONTEMPLATE["sensor-params"]["gyro-offset-y"] = "0";
-  SECTIONTEMPLATE["sensor-params"]["gyro-offset-z"] = "0";
-  SECTIONTEMPLATE["sensor-params"]["accel-sens-x"] = "1";
-  SECTIONTEMPLATE["sensor-params"]["accel-sens-y"] = "1";
-  SECTIONTEMPLATE["sensor-params"]["accel-sens-z"] = "1";
-  SECTIONTEMPLATE["sensor-params"]["accel-offset-x"] = "0";
-  SECTIONTEMPLATE["sensor-params"]["accel-offset-y"] = "0";
-  SECTIONTEMPLATE["sensor-params"]["accel-offset-z"] = "0";
-  SECTIONTEMPLATE["sensor-params"]["magnet-offset-x"] = "0";
-  SECTIONTEMPLATE["sensor-params"]["magnet-offset-y"] = "0";
-  SECTIONTEMPLATE["sensor-params"]["magnet-offset-z"] = "0";
+enum  {
+  // Main menu actions
+  ID_START = 0,
+  ID_STOP = 2,
+  ID_EXIT = 1,
+  ID_OPENCONFIG = 3,
 
-  return ptrIni->generate(SECTIONTEMPLATE);
-}
+  // Cursor submenu actions
+  ID_CURSOR_OFF = 4,
+  ID_CURSOR_TOUCHPAD_MODE = 5,
+  ID_CURSOR_FUSION_MODE = 6,
 
-uint64_t strtouhex(std::string start) {
-  return (uint64_t)(std::strtoull(start.c_str(), nullptr, 0));
-}
-// 0-> Fusion on/off
-// 1-> Touchpad on/off
-// 2-> Buttons on/off
-// 3-> Dpad mode on/off
+  // Button submenu actions
+  ID_BUTTON_OFF = 7,
+  ID_BUTTON_SIMPLE_MODE = 8,
+  ID_BUTTON_DPAD_MODE = 9,
+};
 
-int main() {
-  std::cout << R"(
->>=============================================================<<
-||                                                             ||
-||                                                             ||
-||  _________                  ___    _________                ||
-||  __  ____/__________ _________ |  / /__  __ \               ||
-||  _  / __ _  _ \  __ `/_  ___/_ | / /__  /_/ /               ||
-||  / /_/ / /  __/ /_/ /_  /   __ |/ / _  _, _/                ||
-||  \____/  \___/\__,_/ /_/    _____/  /_/ |_|                 ||
-||                                                             ||
-||  ________      _____            ________                    ||
-||  ____  _/________  /_______________  __/_____ ___________   ||
-||   __  / __  __ \  __/  _ \_  ___/_  /_ _  __ `/  ___/  _ \  ||
-||  __/ /  _  / / / /_ /  __/  /   _  __/ / /_/ // /__ /  __/  ||
-||  /___/  /_/ /_/\__/ \___//_/    /_/    \__,_/ \___/ \___/   ||
-||                                                             ||
-||                                                             ||
->>=============================================================<<
 
-)" << std::endl;
-  mINI::INIFile configIniFile("config.ini");
-  mINI::INIStructure configIni;
-  if (!configIniFile.read(configIni)) {
-    std::string adrstr;
-    std::cout << "Enter to your controller's MAC address prefixed with 0x, you "
-                 "can obtain it from a "
-                 "BLE explorer program (Bluetooth LE Lab is recommended)."
-              << std::endl;
+class TrayApp : public wxApp {
+public:
+  virtual bool OnInit() override;
+  virtual int onExit();
+};
 
-    std::cin >> adrstr;
-    if (generateCleanIni(&configIniFile, strtouhex(adrstr))) {
-      std::cout << "config.ini successfully created!\nYou can modify the "
-                   "keybindings there according to "
-                   "https://learn.microsoft.com/en-us/windows/win32/inputdev/"
-                   "virtual-key-codes \n"
-                   "Restart the app to use the controller.";
-    } else {
-      std::cout << "ini file creation failed. Try again.";
-    }
-  } else {
-    std::vector<uint8_t> keys;
-    for (auto &const keyValue : configIni.get("buttons")) {
-      keys.push_back(strtouhex(configIni["buttons"][keyValue.first]));
-    }
-    GearVRController ControllerObject = GearVRController(
-        strtouhex(configIni["mac"]["address"]), keys,
-        FusionSettings{
-            .fusionCursorSens =
-                std::stof(configIni["cursors"]["fusion-sens"]),
-        .touchCursorSens= std::stof(configIni["cursors"]["touchpad-sens"]),
-            .sensorGain = std::stof(configIni["engine-params"]["sensor-gain"]),
-            .magnetEnable =
-                (configIni["engine-params"]["magnet-enable"] == "1"),
-            .rejectEnable =
-                (configIni["engine-params"]["reject-enable"] == "1"),
-            .rejectAccel =
-                std::stof(configIni["engine-params"]["reject-accel"]),
-            .rejectMagnet =
-                std::stof(configIni["engine-params"]["reject-magnet"]),
-            .gyroSens = {std::stof(configIni["sensor-params"]["gyro-sens-x"]),
-                         std::stof(configIni["sensor-params"]["gyro-sens-y"]),
-                         std::stof(configIni["sensor-params"]["gyro-sens-z"])},
-            .gyroOffset =
-                {std::stof(configIni["sensor-params"]["gyro-offset-x"]),
-                 std::stof(configIni["sensor-params"]["gyro-offset-y"]),
-                 std::stof(configIni["sensor-params"]["gyro-offset-z"])},
-            .accelSens = {std::stof(configIni["sensor-params"]["accel-sens-x"]),
-                          std::stof(configIni["sensor-params"]["accel-sens-y"]),
-                          std::stof(
-                              configIni["sensor-params"]["accel-sens-z"])},
-            .accelOffset =
-                {std::stof(configIni["sensor-params"]["accel-offset-x"]),
-                 std::stof(configIni["sensor-params"]["accel-offset-y"]),
-                 std::stof(configIni["sensor-params"]["accel-offset-z"])},
-            .magnetOffset = {
-                std::stof(configIni["sensor-params"]["magnet-offset-x"]),
-                std::stof(configIni["sensor-params"]["magnet-offset-y"]),
-                std::stof(configIni["sensor-params"]["magnet-offset-z"])}});
-    ControllerObject.writeCommand(GearVRController::VR);
-    ControllerObject.writeCommand(GearVRController::SENSORS);
-    std::cout << "Note: Fusion and touchpad cannot be turned on at the same "
-                 "time.\n";
-    while (true) {
-      int choice;
-      ControllerObject.revokeListener();
-      std::cout << "-----------------------------------------------------------"
-                   "------\n";
-      std::cout << "1. Toggle Fusion.\t Status:" << ControllerObject.opFlags[0]
-                << std::endl;
-      std::cout << "2. Toggle Touchpad.\t Status:"
-                << ControllerObject.opFlags[1] << std::endl;
-      std::cout << "3. Toggle Buttons.\t Status:" << ControllerObject.opFlags[2]
-                << std::endl;
-      std::cout << "4. Toggle D-pad Mode.\t Status:"
-                << ControllerObject.opFlags[3] << std::endl;
-      std::cout << "5. Start controller." << std::endl;
-      std::cout << "-----------------------------------------------------------"
-                   "------\n";
-      std::cin >> choice;
-      switch (choice) {
-      case 1:
-        ControllerObject.opFlags.flip(0);
-        ControllerObject.opFlags.set(1, 0);
-        break;
-      case 2:
-        ControllerObject.opFlags.flip(1);
-        ControllerObject.opFlags.set(0, 0);
-        break;
-      case 3:
-        ControllerObject.opFlags.flip(2);
-        break;
-      case 4:
-        ControllerObject.opFlags.flip(3);
-        break;
-      case 5:
-        ControllerObject.startListener();
-        system("pause");
-        break;
-      default:
-        break;
-      }
-    }
+DECLARE_APP(TrayApp);
+
+class TrayIcon : public wxTaskBarIcon {
+public:
+  TrayIcon(){
+    std::wstring r = L"config.ini";
+    wchar_t a[MAX_PATH];
+    GetFullPathNameW(r.c_str(), MAX_PATH, a, NULL);
+    this->configFilePath = std::wstring(a);
+  };
+  std::wstring configFilePath;
+  int cursorMode = 0;
+  int buttonMode = 0;
+protected:
+  wxMenu *CreatePopupMenu() override {
+    wxMenu *mainMenu = new wxMenu();
+    wxMenu* confgSubmenu = new wxMenu();
+    wxMenu *cursorSubmenu = new wxMenu();
+    wxMenu *buttonSubmenu = new wxMenu();
+
+    auto cursorOffItem = cursorSubmenu->AppendRadioItem(ID_CURSOR_OFF, "OFF");
+    cursorOffItem->Check(cursorMode == 0);
+    auto cursorTouchItem = cursorSubmenu->AppendRadioItem(
+        ID_CURSOR_TOUCHPAD_MODE, "Touchpad Mode");
+    cursorTouchItem->Check(cursorMode == 1);
+    auto cursorFusionItem =
+        cursorSubmenu->AppendRadioItem(ID_CURSOR_FUSION_MODE, "Fusion Mode");
+    cursorFusionItem->Check(cursorMode == 2);
+
+    Bind(
+        wxEVT_COMMAND_MENU_SELECTED,
+        [=, this](wxCommandEvent &e) {
+          cursorMode = 0;
+        },
+        ID_CURSOR_OFF);
+    Bind(
+        wxEVT_COMMAND_MENU_SELECTED,
+        [=](wxCommandEvent &e) {
+          cursorMode = 1;
+        },
+        ID_CURSOR_TOUCHPAD_MODE);
+
+    Bind(
+        wxEVT_COMMAND_MENU_SELECTED,
+        [=](wxCommandEvent &e) {
+          cursorMode = 2;
+        },
+        ID_CURSOR_FUSION_MODE);
+
+
+    auto buttonOffItem = buttonSubmenu->AppendRadioItem(ID_BUTTON_OFF, "OFF");
+    buttonOffItem->Check(buttonMode == 0);
+
+    auto buttonSimpleItem =
+        buttonSubmenu->AppendRadioItem(ID_BUTTON_SIMPLE_MODE, "Simple Mode");
+    buttonSimpleItem->Check(buttonMode == 1);
+
+    auto buttonDpadItem =
+        buttonSubmenu->AppendRadioItem(ID_BUTTON_DPAD_MODE, "D-Pad Mode");
+    buttonDpadItem->Check(buttonMode == 2);
+
+    Bind(
+        wxEVT_COMMAND_MENU_SELECTED,
+        [=, this](wxCommandEvent &e) { buttonMode = 0; }, ID_BUTTON_OFF);
+
+    Bind(
+        wxEVT_COMMAND_MENU_SELECTED,
+        [=, this](wxCommandEvent &e) { buttonMode = 1; },
+        ID_BUTTON_SIMPLE_MODE);
+
+    confgSubmenu->Append(ID_OPENCONFIG, "Open config.ini");
+    Bind(
+        wxEVT_MENU,
+        [=, this](wxCommandEvent &e) { buttonMode = 2; }, ID_BUTTON_DPAD_MODE);
+
+        Bind(
+        wxEVT_COMMAND_MENU_SELECTED,
+        [=](wxCommandEvent &) {
+          ShellExecute(0, 0, configFilePath.c_str(), 0, 0, SW_SHOW);
+        },
+        ID_OPENCONFIG);
+
+    confgSubmenu->AppendSubMenu(cursorSubmenu, "Cursor Mode");
+    confgSubmenu->AppendSubMenu(buttonSubmenu, "Button Mode");
+
+
+    mainMenu->Append(ID_START, "Start");
+    mainMenu->Append(ID_STOP, "Stop");
+    mainMenu->AppendSubMenu(confgSubmenu, "Config");
+    mainMenu->Append(wxID_EXIT, "Exit");
+
+    Bind(
+        wxEVT_MENU, [=](wxCommandEvent &) { wxGetApp().Exit(); },
+        wxID_EXIT);
+    return mainMenu;
   }
+};
+
+bool TrayApp::OnInit() {
+  if (!wxApp::OnInit())
+    return false;
+
+  // Create the tray icon
+  TrayIcon *trayIcon = new TrayIcon();
+
+  // Load an icon (replace with your own .xpm or .ico file)
+  wxIcon icon("./resources/test.ico", wxBITMAP_TYPE_ICO);
+  if (icon.IsOk()) {
+    trayIcon->SetIcon(icon, "My Tray Application");
+  }
+
+  return true;
 }
+
+int TrayApp::onExit() { return 1; }
+
+wxIMPLEMENT_APP(TrayApp);

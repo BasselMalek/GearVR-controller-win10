@@ -428,14 +428,14 @@ void GearVRController::DEBUG_PRINT_HEXDATAEVENT(uint8_t *buffer) {
   std::cout << key_string << std::endl;
 }
 
-void GearVRController::DEBUG_PRINT_UUID() {
-  for (auto ser :
-       this->calibService.GetCharacteristicsAsync().get().Characteristics()) {
-    wchar_t struuid[39];
-    auto result = StringFromGUID2(ser.Uuid(), struuid, 39);
-    std::wcout << struuid << std::endl;
-  }
-}
+//void GearVRController::DEBUG_PRINT_UUID() {
+//  for (auto ser :
+//       this->calibService.GetCharacteristicsAsync().get().Characteristics()) {
+//    wchar_t struuid[39];
+//    auto result = StringFromGUID2(ser.Uuid(), struuid, 39);
+//    std::wcout << struuid << std::endl;
+//  }
+//}
 // MiscExtraData ControllerData::returnMiscExtra() {
 //   ControllerData::fullRefresh();
 //   float temp_timestamp =
