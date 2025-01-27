@@ -3,7 +3,6 @@
 //#define _CRT_SECURE_NO_WARNINGS
 
 
-
 // Standard C/C++ headers.
 #include <algorithm>
 #include <bitset>
@@ -13,6 +12,7 @@
 #include <sstream>
 #include <stdlib.h>
 #include <vector>
+#include <thread>
 
 // Windows headers.
 #include "wtypes.h"
