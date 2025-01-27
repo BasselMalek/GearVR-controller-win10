@@ -28,6 +28,7 @@ A Windows interface implementation for the Samsung GearVR Controller.
     - Download and setup wxWidgets through their [tutorial](https://docs.wxwidgets.org/3.2/plat_msw_binaries.html)
     - Open the `.sln` file in Visual Studio
     - Build the project to resolve WinRT dependencies
+    - Extract the release DLLs for wxWidgets into the root directory for your exe
 
 3. Initial configuration:
 
