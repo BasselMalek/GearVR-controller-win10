@@ -4,10 +4,10 @@ A Windows interface implementation for the Samsung GearVR Controller.
 
 > ⚠️ **Breaking Change: Configuration Update Required**
 >
-> In this release, hardcoded calibration parameters have been moved to the configuration file (`config.ini`).
+> In this release, hardcoded calibration parameters have been moved to the configuration file (`config.ini`) and the app runs through a GUI now.
 > Users must manually append the parameters from the code into two new sections in their `.ini` file to ensure proper functionality as follows.
 >
-> ### Migration Steps:
+> ## Migration Steps
 >
 > 1. Save the keybindings in the old `.ini` and any calibration numbers somewhere safe and delete the file.
 > 2. Generate the `.ini` file again by running the program and inputing your MAC.
@@ -25,32 +25,32 @@ A Windows interface implementation for the Samsung GearVR Controller.
 2. Project setup:
 
     - Clone the repository
+    - Download and setup wxWidgets through their [tutorial](https://docs.wxwidgets.org/3.2/plat_msw_binaries.html)
     - Open the `.sln` file in Visual Studio
     - Build the project to resolve WinRT dependencies
 
 3. Initial configuration:
 
     - Run the built `.exe`
-    - Enter the MAC address when prompted
-    - The program will generate a `config.ini` with default keybindings
+    - Press start from the tray icon context menu
+    - The program will generate a `config.ini` with default keybindings and a placeholder MAC address
+    - Put in the MAC address you extracted earlier from BLE labs in decimal in its field
     - Button mappings can be customized using virtual key codes found in the [Windows documentation](https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes)
-    - Restart the program to apply settings
 
 4. Operation:
-    - Select the desired operating modes for the controller
-    - Input `5` to enable controller functionality
+    - Select the desired operating modes for the controller from the config menu
+    - Press Start to enable controller functionality
 
 ## Features
 
--   Command-line interface
 -   Customizable button mapping
 -   Touchpad tracking functionality
 -   Dual-mode touchpad operation:
     -   Mode 1: Single-button touchpad
     -   Mode 2: Five-button configuration (center + four directional)
--   Experimental 3D cursor support:
-    -   Currently requires calibration to address drift and jitter
-    -   Not compatible with simultaneous touchpad tracking
+-   Motion cursor support:
+-   Allows calibration to address drift and jitter
+-   Not compatible with simultaneous touchpad tracking
 
 ## Credits
 
