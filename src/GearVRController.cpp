@@ -3,16 +3,162 @@
 
 using namespace winrt::Windows;
 
-void KeyMappings::initMappings(std::vector<uint8_t> scanKeys) {
+uint64_t GearVRController::stoh(std::string src) {
+  return (uint64_t)(std::strtoull(src.c_str(), nullptr, 0));
+};
+bool GearVRController::generateCleanIni(mINI::INIFile *ptrIni,
+                                        uint64_t controllerAddress) {
+  mINI::INIStructure SECTIONTEMPLATE;
+  SECTIONTEMPLATE["mac"]["address"] = std::to_string(controllerAddress);
+  SECTIONTEMPLATE["buttons"]["trigger"] = "0x01";
+  SECTIONTEMPLATE["buttons"]["home"] = "0x5B";
+  SECTIONTEMPLATE["buttons"]["back"] = "0x08";
+  SECTIONTEMPLATE["buttons"]["touchpad-single"] = "0x02";
+  SECTIONTEMPLATE["buttons"]["vol-up"] = "0xAF";
+  SECTIONTEMPLATE["buttons"]["vol-down"] = "0xAE";
+  SECTIONTEMPLATE["buttons"]["touchpad-center"] = "0x02";
+  SECTIONTEMPLATE["buttons"]["touchpad-up"] = "0x26";
+  SECTIONTEMPLATE["buttons"]["touchpad-down"] = "0x28";
+  SECTIONTEMPLATE["buttons"]["touchpad-right"] = "0x27";
+  SECTIONTEMPLATE["buttons"]["touchpad-left"] = "0x25";
+  SECTIONTEMPLATE["cursors"]["fusion-sens"] = "5";
+  SECTIONTEMPLATE["cursors"]["touchpad-sens"] = "5";
+  SECTIONTEMPLATE["engine-params"]["sensor-gain"] = "0.5";
+  SECTIONTEMPLATE["engine-params"]["magnet-enable"] = "1";
+  SECTIONTEMPLATE["engine-params"]["reject-enable"] = "1";
+  SECTIONTEMPLATE["engine-params"]["reject-accel"] = "0.5";
+  SECTIONTEMPLATE["engine-params"]["reject-magnet"] = "0.5";
+  SECTIONTEMPLATE["sensor-params"]["gyro-sens-x"] = "1";
+  SECTIONTEMPLATE["sensor-params"]["gyro-sens-y"] = "1";
+  SECTIONTEMPLATE["sensor-params"]["gyro-sens-z"] = "1";
+  SECTIONTEMPLATE["sensor-params"]["gyro-offset-x"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["gyro-offset-y"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["gyro-offset-z"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["accel-sens-x"] = "1";
+  SECTIONTEMPLATE["sensor-params"]["accel-sens-y"] = "1";
+  SECTIONTEMPLATE["sensor-params"]["accel-sens-z"] = "1";
+  SECTIONTEMPLATE["sensor-params"]["accel-offset-x"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["accel-offset-y"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["accel-offset-z"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["magnet-offset-x"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["magnet-offset-y"] = "0";
+  SECTIONTEMPLATE["sensor-params"]["magnet-offset-z"] = "0";
+
+  return ptrIni->generate(SECTIONTEMPLATE);
+}
+ControllerSettings GearVRController::loadFromIni() {
+
+  mINI::INIFile configIniFile("config.ini");
+  mINI::INIStructure configIni;
+  if (!configIniFile.read(configIni)) {
+    if (generateCleanIni(&configIniFile, GearVRController::stoh("0"))) {
+      return ControllerSettings{.macAddress =
+                                    1}; // very lazy error communication here
+                                        // but i'm constrained to work with wx.
+    } else {
+      return ControllerSettings{.macAddress = 0};
+    }
+  } else {
+    std::vector<uint8_t> keys;
+    for (auto &const keyValue : configIni.get("buttons")) {
+      keys.push_back(
+          GearVRController::stoh(configIni["buttons"][keyValue.first]));
+    }
+
+    return ControllerSettings{
+        .macAddress = GearVRController::stoh(configIni["mac"]["address"]),
+        .fusionCursorSens = std::stof(configIni["cursors"]["fusion-sens"]),
+        .touchCursorSens = std::stof(configIni["cursors"]["touchpad-sens"]),
+        .sensorGain = std::stof(configIni["engine-params"]["sensor-gain"]),
+        .magnetEnable = (configIni["engine-params"]["magnet-enable"] == "1"),
+        .rejectEnable = (configIni["engine-params"]["reject-enable"] == "1"),
+        .rejectAccel = std::stof(configIni["engine-params"]["reject-accel"]),
+        .rejectMagnet = std::stof(configIni["engine-params"]["reject-magnet"]),
+        .gyroSens = {std::stof(configIni["sensor-params"]["gyro-sens-x"]),
+                     std::stof(configIni["sensor-params"]["gyro-sens-y"]),
+                     std::stof(configIni["sensor-params"]["gyro-sens-z"])},
+        .gyroOffset = {std::stof(configIni["sensor-params"]["gyro-offset-x"]),
+                       std::stof(configIni["sensor-params"]["gyro-offset-y"]),
+                       std::stof(configIni["sensor-params"]["gyro-offset-z"])},
+        .accelSens = {std::stof(configIni["sensor-params"]["accel-sens-x"]),
+                      std::stof(configIni["sensor-params"]["accel-sens-y"]),
+                      std::stof(configIni["sensor-params"]["accel-sens-z"])},
+        .accelOffset = {std::stof(configIni["sensor-params"]["accel-offset-x"]),
+                        std::stof(configIni["sensor-params"]["accel-offset-y"]),
+                        std::stof(
+                            configIni["sensor-params"]["accel-offset-z"])},
+        .magnetOffset =
+            {std::stof(configIni["sensor-params"]["magnet-offset-x"]),
+             std::stof(configIni["sensor-params"]["magnet-offset-y"]),
+             std::stof(configIni["sensor-params"]["magnet-offset-z"])},
+        .keys = keys,
+    };
+  }
+};
+
+GearVRController::GearVRController(ControllerSettings iniSettings)
+    : deviceObject(
+          Devices::Bluetooth::BluetoothLEDevice::FromBluetoothAddressAsync(
+              iniSettings.macAddress)
+              .get()),
+      deviceServices(deviceObject.GetGattServicesAsync().get().Services()),
+      commsService(deviceServices.GetAt(5)),
+      calibService(deviceServices.GetAt(4)),
+      calibCharac(
+          calibService.GetCharacteristicsAsync().get().Characteristics().GetAt(
+              1)),
+      DATA_TX(
+          commsService.GetCharacteristicsAsync().get().Characteristics().GetAt(
+              0)),
+      COMMAND_RX(
+          commsService.GetCharacteristicsAsync().get().Characteristics().GetAt(
+              1)),
+      currentMode(DEVICE_MODES::OFF),
+      lastStamp(std::chrono::steady_clock::now()), opFlags(std::bitset<4>(0)),
+      fusionSettings(iniSettings) {
+
+  this->MAC_address = this->fusionSettings.macAddress;
+  this->buttonMappings.resize(15);
+  initializeSettings(this->fusionSettings);
+}
+GearVRController::~GearVRController() {
+  if (this->listenerToken) {
+    this->revokeListener();
+  }
+}
+
+void GearVRController::initializeSettings(
+    const ControllerSettings &iniSettings) {
+  this->mapKeys(this->fusionSettings.keys);
+
+  FusionAhrsReset(&this->fusionEngine);
+  FusionOffsetInitialise(&this->fusionOffsetParams, 69);
+  FusionAhrsInitialise(&this->fusionEngine);
+
+  const FusionAhrsSettings settings = {
+      .convention = FusionConventionEnu,
+      .gain = iniSettings.sensorGain,
+      .gyroscopeRange = 1000.0f,
+      .accelerationRejection = iniSettings.rejectAccel,
+      .magneticRejection = iniSettings.rejectMagnet,
+      .recoveryTriggerPeriod =
+          iniSettings.rejectEnable
+              ? static_cast<unsigned int>(5 * 69) /* 5 seconds */
+              : 0,
+  };
+
+  FusionAhrsSetSettings(&this->fusionEngine, &settings);
+}
+void GearVRController::mapKeys(std::vector<uint8_t> scanKeys) {
   for (int i = 0; i < 11; i++) {
     if (scanKeys[i] == 0x01 || scanKeys[i] == 0x02) {
-      KeyMappings::inputs[i].type = INPUT_MOUSE;
-      KeyMappings::inputs[i].mi.dwFlags =
+      this->buttonMappings[i].type = INPUT_MOUSE;
+      this->buttonMappings[i].mi.dwFlags =
           scanKeys[i] == 0x01 ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_RIGHTDOWN;
     } else {
-      KeyMappings::inputs[i].type = INPUT_KEYBOARD;
+      this->buttonMappings[i].type = INPUT_KEYBOARD;
     }
-    KeyMappings::inputs[i].ki.wVk = scanKeys[i];
+    this->buttonMappings[i].ki.wVk = scanKeys[i];
   }
 }
 
@@ -52,49 +198,6 @@ GearVRController::writeCommand(GearVRController::DEVICE_MODES writeCommand) {
   return COMMAND_RX.WriteValueAsync(send_packet).get();
 }
 
-GearVRController::GearVRController(uint64_t address, std::vector<uint8_t>iniKeys,
-                                   FusionSettings iniSettings)
-    : deviceObject(
-          Devices::Bluetooth::BluetoothLEDevice::FromBluetoothAddressAsync(
-              address)
-              .get()),
-      deviceServices(deviceObject.GetGattServicesAsync().get().Services()),
-      commsService(deviceServices.GetAt(5)),
-      calibService(deviceServices.GetAt(4)),
-      calibCharac(
-          calibService.GetCharacteristicsAsync().get().Characteristics().GetAt(
-              1)),
-      DATA_TX(
-          commsService.GetCharacteristicsAsync().get().Characteristics().GetAt(
-              0)),
-      COMMAND_RX(
-          commsService.GetCharacteristicsAsync().get().Characteristics().GetAt(
-              1)),
-      currentMode(DEVICE_MODES::OFF),
-      lastStamp(std::chrono::steady_clock::now()), opFlags(std::bitset<4>(0)), fusionSettings(iniSettings) {
-  this->MAC_address = address;
-  this->buttonMappings.initMappings(iniKeys);
-  FusionOffsetInitialise(&this->fusionOffsetParams, 69);
-  FusionAhrsInitialise(&this->fusionEngine);
-  const FusionAhrsSettings settings = {
-    .convention = FusionConventionEnu,
-    .gain = this->fusionSettings.sensorGain,
-    .gyroscopeRange = 1000.0f,
-    .accelerationRejection = this->fusionSettings.rejectAccel,
-    .magneticRejection = this->fusionSettings.rejectMagnet,
-    .recoveryTriggerPeriod = this->fusionSettings.rejectEnable
-                                 ? static_cast<unsigned int>(5 * 69) /* 5 seconds */
-                                 : 0,
-  };
-  FusionAhrsSetSettings(&this->fusionEngine, &settings);
-}
-
-GearVRController::~GearVRController() {
-  if (this->listenerToken) {
-    this->revokeListener();
-  }
-}
-
 void GearVRController::startListener() {
 
   auto notifyStatus =
@@ -117,6 +220,21 @@ void GearVRController::revokeListener() {
     this->DATA_TX.ValueChanged(this->listenerToken);
     this->listenerToken.value = 0;
   }
+}
+void GearVRController::manualRead() {
+  GearVRController::DEBUG_PRINT_HEXDATAEVENT(
+      this->calibCharac.ReadValueAsync().get().Value().data());
+}
+
+void GearVRController::startOperation(std::bitset<4> opFlags) {
+  this->opFlags = opFlags;
+  this->writeCommand(GearVRController::VR);
+  this->writeCommand(GearVRController::SENSORS);
+  this->startListener();
+}
+void GearVRController::pauseOperation() {
+  this->revokeListener();
+  this->writeCommand(GearVRController::OFF);
 }
 
 void GearVRController::mainEventHandler(
@@ -167,42 +285,6 @@ void GearVRController::mainEventHandler(
   }
 }
 
-void GearVRController::keyHandler(std::vector<bool> &keyStates,
-                                  bool DPAD_MODE) {
-  static std::vector<bool> prev(11, 0);
-  int it = DPAD_MODE ? 11 : 6;
-  for (int i = 0; i < it; i++) {
-    if (DPAD_MODE && i == 3) {
-      // skip touchpad action when in d-pad  mode.
-      continue;
-    }
-    if (keyStates[i] && !prev[i]) {
-      if (this->buttonMappings.inputs[i].type == INPUT_MOUSE) {
-        SendInput(1, &this->buttonMappings.inputs[i], sizeof(INPUT));
-      } else {
-        this->buttonMappings.inputs[i].ki.dwFlags = 0;
-        SendInput(1, &this->buttonMappings.inputs[i], sizeof(INPUT));
-      }
-    } else if (!keyStates[i] && prev[i]) {
-      if (this->buttonMappings.inputs[i].type == INPUT_MOUSE) {
-        // This is a very lazy implementation that prevents further mouse
-        // mappings, should be changed later.
-        this->buttonMappings.inputs[i].mi.dwFlags =
-            this->buttonMappings.inputs[i].ki.wVk == 0x01 ? MOUSEEVENTF_LEFTUP
-                                                  : MOUSEEVENTF_RIGHTUP;
-        SendInput(1, &this->buttonMappings.inputs[i], sizeof(INPUT));
-        this->buttonMappings.inputs[i].mi.dwFlags =
-            this->buttonMappings.inputs[i].ki.wVk == 0x01 ? MOUSEEVENTF_LEFTDOWN
-                                                  : MOUSEEVENTF_RIGHTDOWN;
-      } else {
-        this->buttonMappings.inputs[i].ki.dwFlags = KEYEVENTF_KEYUP;
-        SendInput(1, &this->buttonMappings.inputs[i], sizeof(INPUT));
-      }
-    }
-  }
-  prev = keyStates;
-}
-
 bool GearVRController::dpadState(int xAxis, int yAxis, char direction) {
   xAxis = (xAxis - 157 == -157) ? 0 : xAxis - 157;
   yAxis = (-(yAxis - 157) == 157) ? 0 : -(yAxis - 157);
@@ -241,17 +323,55 @@ bool GearVRController::dpadState(int xAxis, int yAxis, char direction) {
     break;
   }
 }
+void GearVRController::keyHandler(std::vector<bool> &keyStates,
+                                  bool DPAD_MODE) {
+  static std::vector<bool> prev(11, 0);
+  int it = DPAD_MODE ? 11 : 6;
+  for (int i = 0; i < it; i++) {
+    if (DPAD_MODE && i == 3) {
+      // skip touchpad action when in d-pad  mode.
+      continue;
+    }
+    if (keyStates[i] && !prev[i]) {
+      if (this->buttonMappings[i].type == INPUT_MOUSE) {
+        SendInput(1, &this->buttonMappings[i], sizeof(INPUT));
+      } else {
+        this->buttonMappings[i].ki.dwFlags = 0;
+        SendInput(1, &this->buttonMappings[i], sizeof(INPUT));
+      }
+    } else if (!keyStates[i] && prev[i]) {
+      if (this->buttonMappings[i].type == INPUT_MOUSE) {
+        // This is a very lazy implementation that prevents further mouse
+        // mappings, should be changed later.
+        this->buttonMappings[i].mi.dwFlags =
+            this->buttonMappings[i].ki.wVk == 0x01 ? MOUSEEVENTF_LEFTUP
+                                                   : MOUSEEVENTF_RIGHTUP;
+        SendInput(1, &this->buttonMappings[i], sizeof(INPUT));
+        this->buttonMappings[i].mi.dwFlags =
+            this->buttonMappings[i].ki.wVk == 0x01 ? MOUSEEVENTF_LEFTDOWN
+                                                   : MOUSEEVENTF_RIGHTDOWN;
+      } else {
+        this->buttonMappings[i].ki.dwFlags = KEYEVENTF_KEYUP;
+        SendInput(1, &this->buttonMappings[i], sizeof(INPUT));
+      }
+    }
+  }
+  prev = keyStates;
+}
 
 void GearVRController::touchHandler(int xAxis, int yAxis) {
   static int xPrev = 0, yPrev = 0;
-  xAxis = (xAxis * this->fusionSettings.touchCursorSens) - (157 * this->fusionSettings.touchCursorSens);
-  yAxis = (yAxis * this->fusionSettings.touchCursorSens) - (157 * this->fusionSettings.touchCursorSens);
+  xAxis = (xAxis * this->fusionSettings.touchCursorSens) -
+          (157 * this->fusionSettings.touchCursorSens);
+  yAxis = (yAxis * this->fusionSettings.touchCursorSens) -
+          (157 * this->fusionSettings.touchCursorSens);
   static INPUT mouseInput = {};
   mouseInput.type = INPUT_MOUSE;
   mouseInput.mi.dx = (xAxis - xPrev);
   mouseInput.mi.dy = (yAxis - yPrev);
-  if ((xAxis != (157 * -this->fusionSettings.touchCursorSens) && yAxis != (157 * -this->fusionSettings.touchCursorSens) &&
-       xPrev && yPrev) &&
+  if ((xAxis != (157 * -this->fusionSettings.touchCursorSens) &&
+       yAxis != (157 * -this->fusionSettings.touchCursorSens) && xPrev &&
+       yPrev) &&
       abs(xAxis - xPrev) > 1 && abs(yAxis - yPrev) > 1) {
     mouseInput.mi.dwFlags = MOUSEEVENTF_MOVE;
     SendInput(1, &mouseInput, sizeof(INPUT));
@@ -265,7 +385,7 @@ void GearVRController::touchHandler(int xAxis, int yAxis) {
 FusionQuaternion GearVRController::fusionHandler(uint8_t rawBytes[18]) {
   auto clock = std::chrono::steady_clock::now();
   static float scaledValues[9];
-  for (int i = 0; i < (this->fusionSettings.magnetEnable?9:6); i++) {
+  for (int i = 0; i < (this->fusionSettings.magnetEnable ? 9 : 6); i++) {
     short int combinedFromBuffer =
         ((rawBytes[2 * i + 1] << 8) | rawBytes[2 * i]);
     if (i < 3) {
@@ -324,11 +444,11 @@ FusionQuaternion GearVRController::fusionHandler(uint8_t rawBytes[18]) {
                 this->fusionSettings.magnetOffset[1],
                 this->fusionSettings.magnetOffset[2],
             }),
-                   timeDelta);
+        timeDelta);
   } else {
-  FusionAhrsUpdateNoMagnetometer(&this->fusionEngine, gyroscope, accelerometer,
-                   timeDelta);
-  this->lastStamp = clock;
+    FusionAhrsUpdateNoMagnetometer(&this->fusionEngine, gyroscope,
+                                   accelerometer, timeDelta);
+    this->lastStamp = clock;
   }
 
   return FusionAhrsGetQuaternion(&this->fusionEngine);
@@ -392,8 +512,10 @@ void GearVRController::fusionCursor(FusionQuaternion quat, bool refResetOne,
     SendInput(1, &fusionInput, sizeof(INPUT));
     initLaunch = 0;
   } else {
-    currYaw = atan2(2 * (quat.element.w * quat.element.z + quat.element.x * quat.element.y),
-                    1 - 2 * (quat.element.y * quat.element.y + quat.element.z * quat.element.z)) /
+    currYaw = atan2(2 * (quat.element.w * quat.element.z +
+                         quat.element.x * quat.element.y),
+                    1 - 2 * (quat.element.y * quat.element.y +
+                             quat.element.z * quat.element.z)) /
               M_PI;
     currPitch = std::atan2(2 * (quat.element.w * quat.element.x +
                                 quat.element.y * quat.element.z),
@@ -401,9 +523,12 @@ void GearVRController::fusionCursor(FusionQuaternion quat, bool refResetOne,
                                     quat.element.y * quat.element.y)) /
                 M_PI;
 
-    currYaw = std::round(1000*currYaw);
+    currYaw = std::round(1000 * currYaw);
     currPitch = std::round(1000 * currPitch);
-    fusionInput.mi.dx = std::abs(currYaw-prevYaw)>=1000?0:-(currYaw - prevYaw)*this->fusionSettings.fusionCursorSens;
+    fusionInput.mi.dx =
+        std::abs(currYaw - prevYaw) >= 1000
+            ? 0
+            : -(currYaw - prevYaw) * this->fusionSettings.fusionCursorSens;
     fusionInput.mi.dy =
         std::abs(currPitch - prevPitch) >= 1000
             ? 0
@@ -414,11 +539,6 @@ void GearVRController::fusionCursor(FusionQuaternion quat, bool refResetOne,
   }
 }
 
-void GearVRController::manualRead() {
-  GearVRController::DEBUG_PRINT_HEXDATAEVENT(
-      this->calibCharac.ReadValueAsync().get().Value().data());
-}
-
 void GearVRController::DEBUG_PRINT_HEXDATAEVENT(uint8_t *buffer) {
   std::ostringstream convert;
   for (int a = 0; a < 59; a++) {
@@ -427,23 +547,3 @@ void GearVRController::DEBUG_PRINT_HEXDATAEVENT(uint8_t *buffer) {
   std::string key_string = convert.str();
   std::cout << key_string << std::endl;
 }
-
-void GearVRController::DEBUG_PRINT_UUID() {
-  for (auto ser :
-       this->calibService.GetCharacteristicsAsync().get().Characteristics()) {
-    wchar_t struuid[39];
-    auto result = StringFromGUID2(ser.Uuid(), struuid, 39);
-    std::wcout << struuid << std::endl;
-  }
-}
-// MiscExtraData ControllerData::returnMiscExtra() {
-//   ControllerData::fullRefresh();
-//   float temp_timestamp =
-//       ((buffer_vector[0] + buffer_vector[1] + buffer_vector[2]) &
-//       0xFFFFFFFF) / static_cast<float>(1000) * 0.001;
-//   int temp_temperature = buffer_vector[57];
-//   MiscExtraData time;
-//   time.temperature = temp_temperature;
-//   time.timestamp = temp_timestamp;
-//   return time;
-// }

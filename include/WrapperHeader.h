@@ -1,4 +1,7 @@
 #pragma once
+//#define WIN32_LEAN_AND_MEAN
+//#define _CRT_SECURE_NO_WARNINGS
+
 
 // Standard C/C++ headers.
 #include <algorithm>
@@ -9,6 +12,7 @@
 #include <sstream>
 #include <stdlib.h>
 #include <vector>
+#include <thread>
 
 // Windows headers.
 #include "wtypes.h"
